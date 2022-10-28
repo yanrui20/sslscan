@@ -38,6 +38,7 @@
 #define HAVE_SSLSCAN_H_
 
 #include "missing_ciphersuites.h"
+#include <stdbool.h>
 
 // Defines...
 #define false 0
@@ -213,6 +214,16 @@ struct sslCheckOptions
 struct result {
     int index;
     char host[512];
+    char tls_version; // sslv2 sslv3 tls1.0 tls1.1 tls1.2 tls1.3
+    char reneg; // secure support
+    char heartbleed; // tls1.0 tls1.1 tls1.2
+    char cipher_suites; // ???
+    char fs; // ???
+    int exchange_key_strength;
+    int certificate_key_strength;
+    bool ev;
+    // char certificate; // iv dv ov ev
+    bool protocol_downgrade;
 };
 
 // store renegotiation test data
