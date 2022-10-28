@@ -210,6 +210,11 @@ struct sslCheckOptions
     unsigned int tls13_supported;
 };
 
+struct result {
+    int index;
+    char host[512];
+};
+
 // store renegotiation test data
 struct renegotiationOutput
 {

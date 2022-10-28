@@ -5460,13 +5460,33 @@ int testSignatureAlgorithms(struct sslCheckOptions *options) {
 }
 
 
-void read_csv() {
-
+void read_csv(struct result * ret, char *path) {
+    FILE* fp = fopen(path, "r");
+    if (fp == NULL) {
+        fprintf(stderr, "fopen() failed.\n");
+        exit(EXIT_FAILURE);
+    }
+    char buf[512];
+    int buf_size = 512;
+    char *index, *host;
+    for (int i = 0; fgets(buf, buf_size, fp) != NULL; i++) {
+        buf[strlen(buf) - 1] = '\0';
+        index = strtok(buf, ",");
+        host = strtok(NULL, ",");
+        ret[i].index = atoi(index);
+        strcpy(ret[i].host, host);
+    }
+    fclose(fp);
 }
-
 
 int main() {
     char host[512] = "www.baidu.com";
     int port = 443;
-    test(host, port);
+    int line_number_max = 750000;
+    struct result * res = (struct result *)malloc(sizeof(struct result) * line_number_max);
+    read_csv(res, "./test.csv");
+    for (int i = 0; res[i].index != 0; i++) {
+        printf("%d, %s\n", res[i].index, res[i].host);
+    }
+    // test(host, port);
 }
