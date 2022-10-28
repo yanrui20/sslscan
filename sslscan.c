@@ -5468,25 +5468,32 @@ void read_csv(struct result * ret, char *path) {
     }
     int buf_size = 512;
     char buf[buf_size];
+    memset(buf, 0, buf_size);
     char *index, *host;
+    int len;
     for (int i = 0; fgets(buf, buf_size, fp) != NULL; i++) {
-        buf[strlen(buf) - 1] = '\0';
+        len = strlen(buf);
+        if (buf[len - 2] == 13) buf[len - 2] = '\0'; // del CRLF
+        else if (buf[len - 1] == '\n') buf[len - 1] = '\0'; // del LF
         index = strtok(buf, ",");
         host = strtok(NULL, ",");
         ret[i].index = atoi(index);
         strcpy(ret[i].host, host);
+        memset(buf, 0, buf_size);
     }
     fclose(fp);
 }
 
 int main() {
-    char host[512] = "www.baidu.com";
+    // char test_host[512] = "baidu.com";
     int port = 443;
     int line_number_max = 750000;
     struct result * res = (struct result *)malloc(sizeof(struct result) * line_number_max);
+    memset(res, 0, sizeof(struct result) * line_number_max);
     read_csv(res, "./test.csv");
-    // for (int i = 0; res[i].index != 0; i++) {
-    //     printf("%d, %s\n", res[i].index, res[i].host);
-    // }
-    test(host, port);
+    for (int i = 0; res[i].index != 0 && i <= 3; i++) {
+        test(res[i].host, port);
+    }
+    
+    FREE(res);
 }

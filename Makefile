@@ -126,11 +126,12 @@ uninstall:
 .openssl.is.fresh: opensslpull
 	true
 opensslpull:
-	if [ -d openssl -a -d openssl/.git ]; then \
-		cd ./openssl && git checkout OpenSSL_1_1_1-stable && git pull | grep -q "Already up-to-date." && [ -e ../.openssl.is.fresh ] || touch ../.openssl.is.fresh ; \
-	else \
-		git clone --depth 1 -b OpenSSL_1_1_1-stable https://github.com/openssl/openssl ./openssl && cd ./openssl && touch ../.openssl.is.fresh ; \
-	fi
+	cd ./openssl && [ -e ../.openssl.is.fresh ] || touch ../.openssl.is.fresh
+# if [ -d openssl -a -d openssl/.git ]; then \
+	# 	cd ./openssl && git checkout OpenSSL_1_1_1-stable && git pull | grep -q "Already up-to-date." && [ -e ../.openssl.is.fresh ] || touch ../.openssl.is.fresh ; \
+	# else \
+	# 	git clone --depth 1 -b OpenSSL_1_1_1-stable https://github.com/openssl/openssl ./openssl && cd ./openssl && touch ../.openssl.is.fresh ; \
+	# fi
 
 # Need to build OpenSSL differently on OSX
 ifeq ($(OS), Darwin)

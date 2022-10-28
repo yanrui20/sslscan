@@ -214,6 +214,7 @@ struct sslCheckOptions
 struct result {
     int index;
     char host[512];
+    bool connect_error;
     char tls_version; // sslv2 sslv3 tls1.0 tls1.1 tls1.2 tls1.3
     char reneg; // secure support
     char heartbleed; // tls1.0 tls1.1 tls1.2
