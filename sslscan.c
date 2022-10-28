@@ -3748,32 +3748,19 @@ int testHost(struct sslCheckOptions *options)
 }
 
 
-int main(int argc, char *argv[])
+int test(char* hostString, int port)
 {
     // Variables...
     struct sslCheckOptions sslOptions;
     struct sslCipher *sslCipherPointer;
-    int argLoop;
     int tempInt;
     int maxSize;
-    int xmlArg;
     int mode = mode_help;
-    int msec;
-    FILE *targetsFile;
-    char line[1024];
-#ifdef _WIN32
-    WORD wVersionRequested;
-    WSADATA wsaData;
-    int err;
-    HANDLE hConsole;
-    DWORD consoleMode;
-    unsigned int enable_colors;
-#endif
 
     // Init...
     memset(&sslOptions, 0, sizeof(struct sslCheckOptions));
     sslOptions.port = 0;
-    xmlArg = 0;
+    // xmlArg = 0;
     strncpy(sslOptions.host, "127.0.0.1", 10);
     sslOptions.showCertificate = false;
     sslOptions.showTrustedCAs = false;
@@ -3808,510 +3795,89 @@ int main(int argc, char *argv[])
     sslOptions.timeout.tv_sec = 3;
     sslOptions.timeout.tv_usec = 0;
     // Default connect timeout 75s
-    sslOptions.connect_timeout = 75;
+    sslOptions.connect_timeout = 3;
     sslOptions.sleep = 0;
 
     sslOptions.sslVersion = ssl_all;
 
     struct sslCheckOptions *options = &sslOptions;
 
-#ifdef _WIN32
-    /* Attempt to enable console colors.  This succeeds in Windows 10.  For other
-     * OSes, color is disabled. */
-    enable_colors = 1;
-    hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-
-    /* Cygwin's terminal is re-directed, so GetConsoleMode() fails on it.  So we'll try to get a direct handle in that case. */
-    if (!GetConsoleMode(hConsole, &consoleMode)) {
-      hConsole = CreateFile("CONIN$", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-
-      /* Also, Cygwin appears to do full buffering of output, so the program seems to hang until its fully complete, then the output gets dumped all at once.  To be more responsive, we'll force line buffering at 80 bytes (the default terminal width). */
-      setvbuf(stdout, NULL, _IOLBF, 80);
-
-      /* If we still can't get console information, then disable colors. */
-      if (!GetConsoleMode(hConsole, &consoleMode))
-	enable_colors = 0;
-    }
-
-    /* Some terminals already have colors enabled, and somehow don't like being set. */
-    if (enable_colors && ((consoleMode & ENABLE_VIRTUAL_TERMINAL_PROCESSING) == 0)) {
-      if (!SetConsoleMode(hConsole, consoleMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
-	enable_colors = 0;
-    }
-
-    if (!enable_colors) {
-        RESET = "";
-        COL_RED = "";
-        COL_YELLOW = "";
-        COL_BLUE = "";
-        COL_GREEN = "";
-        COL_PURPLE = "";
-        COL_GREY = "";
-        COL_RED_BG = "";
-    }
-
-    /* Initialize networking library. */
-    wVersionRequested = MAKEWORD(2, 2);
-    err = WSAStartup(wVersionRequested, &wsaData);
-    if (err != 0)
-    {
-        printf_error("WSAStartup failed: %d", err);
-        return -1;
-    }
-#endif
     SSL_library_init();
 
-    // Get program parameters
-    for (argLoop = 1; argLoop < argc; argLoop++)
+    mode = mode_single;
+
+    // Get host...
+    // IPv6 [] address parsing by DinoTools/phibos
+    tempInt = 0;
+    // char *hostString = argv[argLoop];
+
+    maxSize = strlen(hostString);
+
+    if (strncmp((char*)hostString, "https://", 8) == 0)
     {
-        // Help
-        if ((strcmp("--help", argv[argLoop]) == 0) || (strcmp("-h", argv[argLoop]) == 0))
-            mode = mode_help;
+        // Strip https:// from the start of the hostname
+        memmove(hostString, hostString + 8, (maxSize - 8));
+        memset(hostString + (maxSize - 8), 0, 8);
+        maxSize = strlen(hostString);
+    }
 
-        // targets
-        else if ((strncmp("--targets=", argv[argLoop], 10) == 0) && (strlen(argv[argLoop]) > 10))
+    int squareBrackets = false;
+    if (hostString[0] == '[')
+    {
+        squareBrackets = true;
+        // skip the square bracket
+        hostString++;
+    }
+
+    while ((hostString[tempInt] != 0) && ((squareBrackets == true && hostString[tempInt] != ']')
+                || (squareBrackets == false && hostString[tempInt] != ':' && hostString[tempInt] != '/')))
+    {
+        tempInt++;
+    }
+
+    if (squareBrackets == true && hostString[tempInt] == ']')
+    {
+        hostString[tempInt] = 0;
+        if (tempInt < maxSize && (hostString[tempInt + 1] == ':' || hostString[tempInt + 1] == '/'))
         {
-            mode = mode_multiple;
-            options->targets = argLoop;
-        }
-
-        // Show certificate
-        else if (strcmp("--show-certificate", argv[argLoop]) == 0)
-            options->showCertificate = true;
-
-        // Don't check certificate strength
-        else if (strcmp("--no-check-certificate", argv[argLoop]) == 0)
-            options->checkCertificate = false;
-
-        // Show supported client ciphers
-        else if (strcmp("--show-ciphers", argv[argLoop]) == 0)
-            options->showClientCiphers = true;
-
-        // Show ciphers ids
-        else if (strcmp("--show-cipher-ids", argv[argLoop]) == 0)
-        {
-            options->showCipherIds = true;
-        }
-
-        // Show handshake times
-        else if (strcmp("--show-times", argv[argLoop]) == 0)
-        {
-            options->showTimes = true;
-        }
-
-        // Show client auth trusted CAs
-        else if (strcmp("--show-client-cas", argv[argLoop]) == 0)
-            options->showTrustedCAs = true;
-
-        // Version
-        else if (strcmp("--version", argv[argLoop]) == 0)
-            mode = mode_version;
-
-        // XML Output
-        else if (strncmp("--xml=", argv[argLoop], 6) == 0)
-            xmlArg = argLoop;
-
-        // Verbose
-        else if (strcmp("--verbose", argv[argLoop]) == 0)
-            options->verbose = true;
-
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L
-        // Cipher details (curve names and EDH key lengths)
-        else if (strcmp("--no-cipher-details", argv[argLoop]) == 0)
-            options->cipher_details = false;
-#endif
-
-        // Disable coloured output
-        else if ((strcmp("--no-colour", argv[argLoop]) == 0) || (strcmp("--no-color", argv[argLoop]) == 0))
-        {
-            RESET = "";
-            COL_RED = "";
-            COL_YELLOW = "";
-            COL_BLUE = "";
-            COL_GREEN = "";
-            COL_PURPLE = "";
-            COL_RED_BG = "";
-            COL_GREY = "";
-        }
-
-        // Client Certificates
-        else if (strncmp("--certs=", argv[argLoop], 8) == 0)
-            options->clientCertsFile = argv[argLoop] +8;
-
-        // Private Key File
-        else if (strncmp("--pk=", argv[argLoop], 5) == 0)
-            options->privateKeyFile = argv[argLoop] +5;
-
-        // Private Key Password
-        else if (strncmp("--pkpass=", argv[argLoop], 9) == 0)
-            options->privateKeyPassword = argv[argLoop] +9;
-
-        // Should we check for supported cipher suites
-        else if (strcmp("--no-ciphersuites", argv[argLoop]) == 0)
-            options->ciphersuites = false;
-
-        // Should we check for TLS Falback SCSV?
-        else if (strcmp("--no-fallback", argv[argLoop]) == 0)
-            options->fallback = false;
-
-        // Should we check for TLS renegotiation?
-        else if (strcmp("--no-renegotiation", argv[argLoop]) == 0)
-            options->reneg = false;
-
-        // Should we check for TLS Compression
-        else if (strcmp("--no-compression", argv[argLoop]) == 0)
-            options->compression = false;
-
-        // Should we check for Heartbleed (CVE-2014-0160)
-        else if (strcmp("--no-heartbleed", argv[argLoop]) == 0)
-            options->heartbleed = false;
-
-        // Should we check for key exchange groups?
-        else if (strcmp("--no-groups", argv[argLoop]) == 0)
-            options->groups = false;
-
-        // Should we check for signature algorithms?
-        else if (strcmp("--show-sigs", argv[argLoop]) == 0)
-            options->signature_algorithms = true;
-
-        // Show IANA/RFC cipher names in output
-        else if (strcmp("--iana-names", argv[argLoop]) == 0)
-            options->ianaNames = true;
-
-        // StartTLS... FTP
-        else if (strcmp("--starttls-ftp", argv[argLoop]) == 0)
-            options->starttls_ftp = true;
-
-        // StartTLS... IMAP
-        else if (strcmp("--starttls-imap", argv[argLoop]) == 0)
-            options->starttls_imap = true;
-
-        else if (strcmp("--starttls-irc", argv[argLoop]) == 0)
-            options->starttls_irc = true;
-
-        // StartTLS... LDAP
-        else if (strcmp("--starttls-ldap", argv[argLoop]) == 0)
-            options->starttls_ldap = true;
-
-        // StartTLS... POP3
-        else if (strcmp("--starttls-pop3", argv[argLoop]) == 0)
-            options->starttls_pop3 = true;
-
-        // StartTLS... SMTP
-        else if (strcmp("--starttls-smtp", argv[argLoop]) == 0)
-            options->starttls_smtp = true;
-
-        // StartTLS... MYSQL
-        else if (strcmp("--starttls-mysql", argv[argLoop]) == 0)
-            options->starttls_mysql = true;
-
-        // StartTLS... XMPP
-        else if (strcmp("--starttls-xmpp", argv[argLoop]) == 0)
-            options->starttls_xmpp = true;
-
-        // StartTLS... PostgreSQL
-        else if (strcmp("--starttls-psql", argv[argLoop]) == 0)
-            options->starttls_psql = true;
-
-        // SSL v2 only...
-        else if (strcmp("--ssl2", argv[argLoop]) == 0)
-            options->sslVersion = ssl_v2;
-
-        // SSL v3 only...
-        else if (strcmp("--ssl3", argv[argLoop]) == 0)
-            options->sslVersion = ssl_v3;
-
-        // TLS v1 only...
-        else if (strcmp("--tls10", argv[argLoop]) == 0)
-            options->sslVersion = tls_v10;
-#if OPENSSL_VERSION_NUMBER >= 0x10001000L
-        // TLS v11 only...
-        else if (strcmp("--tls11", argv[argLoop]) == 0)
-            options->sslVersion = tls_v11;
-
-        // TLS v12 only...
-        else if (strcmp("--tls12", argv[argLoop]) == 0)
-            options->sslVersion = tls_v12;
-        // TLS v13 only...
-        else if (strcmp("--tls13", argv[argLoop]) == 0)
-            options->sslVersion = tls_v13;
-#endif
-        // TLS (all versions)...
-        else if (strcmp("--tlsall", argv[argLoop]) == 0)
-            options->sslVersion = tls_all;
-
-        // Use a server-to-server XMPP handshake
-        else if (strcmp("--xmpp-server", argv[argLoop]) == 0)
-            options->xmpp_server = true;
-
-        // SSL Bugs...
-        else if (strcmp("--bugs", argv[argLoop]) == 0)
-            options->sslbugs = 1;
-
-        // Socket Timeout (both send and receive)
-        else if (strncmp("--timeout=", argv[argLoop], 10) == 0)
-            options->timeout.tv_sec = atoi(argv[argLoop] + 10);
-
-        // Connect Timeout
-        else if (strncmp("--connect-timeout=", argv[argLoop], 18) == 0)
-            options->connect_timeout = atoi(argv[argLoop] + 18);
-
-        // Sleep between requests (ms)
-        else if (strncmp("--sleep=", argv[argLoop], 8) == 0)
-        {
-            msec = atoi(argv[argLoop] + 8);
-            if (msec >= 0) {
-                options->sleep = msec;
-            }
-        }
-
-        // RDP Preamble...
-        else if (strcmp("--rdp", argv[argLoop]) == 0)
-            options->rdp = 1;
-
-        // IPv4 only
-        else if ((strcmp("--ipv4", argv[argLoop]) == 0) || (strcmp("-4", argv[argLoop]) == 0))
-            options->ipv6 = false;
-
-        // IPv6 only
-        else if ((strcmp("--ipv6", argv[argLoop]) == 0) || (strcmp("-6", argv[argLoop]) == 0))
-            options->ipv4 = false;
-
-        // Check OCSP response
-        else if (strcmp("--ocsp", argv[argLoop]) == 0)
-            options->ocspStatus = true;
-
-        // SNI name
-        else if (strncmp("--sni-name=", argv[argLoop], 11) == 0)
-        {
-            strncpy(options->sniname, argv[argLoop]+11, strlen(argv[argLoop])-11);
-            options->sni_set = 1;
-        }
-
-
-        // Host (maybe port too)...
-        else if (argLoop + 1 == argc)
-        {
-            mode = mode_single;
-
-            // Get host...
-            // IPv6 [] address parsing by DinoTools/phibos
-            tempInt = 0;
-            char *hostString = argv[argLoop];
-
-            maxSize = strlen(hostString);
-
-            if (strncmp((char*)hostString, "https://", 8) == 0)
-            {
-                // Strip https:// from the start of the hostname
-                memmove(hostString, hostString + 8, (maxSize - 8));
-                memset(hostString + (maxSize - 8), 0, 8);
-                maxSize = strlen(hostString);
-            }
-
-            int squareBrackets = false;
-            if (hostString[0] == '[')
-            {
-                squareBrackets = true;
-                // skip the square bracket
-                hostString++;
-            }
-
-            while ((hostString[tempInt] != 0) && ((squareBrackets == true && hostString[tempInt] != ']')
-                        || (squareBrackets == false && hostString[tempInt] != ':' && hostString[tempInt] != '/')))
-            {
-                tempInt++;
-            }
-
-            if (squareBrackets == true && hostString[tempInt] == ']')
-            {
-                hostString[tempInt] = 0;
-                if (tempInt < maxSize && (hostString[tempInt + 1] == ':' || hostString[tempInt + 1] == '/'))
-                {
-                    tempInt++;
-                    hostString[tempInt] = 0;
-                }
-            }
-            else
-            {
-                hostString[tempInt] = 0;
-            }
-            strncpy(options->host, hostString, sizeof(options->host) -1);
-
-            // No SNI name passed on command line
-            if (!options->sni_set)
-            {
-                strncpy(options->sniname, options->host, sizeof(options->host) -1);
-            }
-
-            // Get port (if it exists)...
             tempInt++;
-            if (tempInt < maxSize)
-            {
-                errno = 0;
-                options->port = strtol((hostString + tempInt), NULL, 10);
-                if (options->port < 1 || options->port > 65535)
-                {
-                    printf_error("Invalid target specified.");
-                    exit(1);
-                }
-            }
-            else if (options->port == 0) {
-                if (options->starttls_ftp)
-                    options->port = 21;
-                else if (options->starttls_imap)
-                    options->port = 143;
-                else if (options->starttls_irc)
-                    options->port = 6667;
-                else if (options->starttls_ldap)
-                    options->port = 389;
-                else if (options->starttls_pop3)
-                    options->port = 110;
-                else if (options->starttls_smtp)
-                    options->port = 25;
-                else if (options->starttls_mysql)
-                    options->port = 3306;
-                else if (options->starttls_xmpp)
-                    options->port = 5222;
-                else if (options->starttls_psql)
-                    options->port = 5432;
-                else if (options->rdp)
-                    options->port = 3389;
-                else
-                    options->port = 443;
-            }
+            hostString[tempInt] = 0;
         }
-
-        // Not too sure what the user is doing...
-        else
-            mode = mode_help;
     }
-
-    // Open XML file output...
-    if ((xmlArg > 0) && (mode != mode_help))
+    else
     {
-        if (strcmp(argv[xmlArg] + 6, "-") == 0)
-        {
-            options->xmlOutput = stdout;
-            xml_to_stdout = 1;
-        }
-        else
-        {
-            options->xmlOutput = fopen(argv[xmlArg] + 6, "w");
-            if (options->xmlOutput == NULL)
-            {
-                printf_error("Could not open XML output file %s.", argv[xmlArg] + 6);
-                exit(0);
-            }
-        }
-
-        // Output file header...
-        fprintf(options->xmlOutput, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<document title=\"SSLScan Results\" version=\"%s\" web=\"http://github.com/rbsec/sslscan\">\n", VERSION);
+        hostString[tempInt] = 0;
     }
+    strncpy(options->host, hostString, sizeof(options->host) -1);
+
+    // No SNI name passed on command line
+    if (!options->sni_set)
+    {
+        strncpy(options->sniname, options->host, sizeof(options->host) -1);
+    }
+
+    // Get port (if it exists)...
+    tempInt++;
+    if (tempInt < maxSize)
+    {
+        errno = 0;
+        options->port = strtol((hostString + tempInt), NULL, 10);
+        if (options->port < 1 || options->port > 65535)
+        {
+            printf_error("Invalid target specified.");
+            exit(1);
+        }
+    }
+    options->port = port;
+    
 
     // Build the list of ciphers missing from OpenSSL.
     findMissingCiphers();
 
     switch (mode)
     {
-        case mode_version:
-            printf("%s\t\t%s\n\t\t%s\n%s", COL_BLUE, VERSION,
-                    SSLeay_version(SSLEAY_VERSION), RESET);
-#if OPENSSL_VERSION_NUMBER < 0x10001000L
-            printf("\t\t%sOpenSSL version does not support TLSv1.1%s\n", COL_RED, RESET);
-            printf("\t\t%sTLSv1.1 ciphers will not be detected%s\n", COL_RED, RESET);
-            printf("\t\t%sOpenSSL version does not support TLSv1.2%s\n", COL_RED, RESET);
-            printf("\t\t%sTLSv1.2 ciphers will not be detected%s\n", COL_RED, RESET);
-#endif
-            break;
-
-        case mode_help:
-            // Program version banner...
-            printf("%s%s%s\n", COL_BLUE, program_banner, RESET);
-            printf("%s\t\t%s\n\t\t%s\n%s\n\n", COL_BLUE, VERSION,
-                    SSLeay_version(SSLEAY_VERSION), RESET);
-            printf("%sCommand:%s\n", COL_BLUE, RESET);
-            printf("  %s%s [options] [host:port | host]%s\n\n", COL_GREEN, argv[0], RESET);
-            printf("%sOptions:%s\n", COL_BLUE, RESET);
-            printf("  %s--targets=<file>%s     A file containing a list of hosts to check.\n", COL_GREEN, RESET);
-            printf("                       Hosts can  be supplied  with ports (host:port)\n");
-            printf("  %s--sni-name=<name>%s    Hostname for SNI\n", COL_GREEN, RESET);
-            printf("  %s--ipv4, -4%s           Only use IPv4\n", COL_GREEN, RESET);
-            printf("  %s--ipv6, -6%s           Only use IPv6\n", COL_GREEN, RESET);
-            printf("\n");
-            printf("  %s--show-certificate%s   Show full certificate information\n", COL_GREEN, RESET);
-            printf("  %s--show-client-cas%s    Show trusted CAs for TLS client auth\n", COL_GREEN, RESET);
-            printf("  %s--no-check-certificate%s  Don't warn about weak certificate algorithm or keys\n", COL_GREEN, RESET);
-            printf("  %s--ocsp%s               Request OCSP response from server\n", COL_GREEN, RESET);
-            printf("  %s--pk=<file>%s          A file containing the private key or a PKCS#12 file\n", COL_GREEN, RESET);
-            printf("                       containing a private key/certificate pair\n");
-            printf("  %s--pkpass=<password>%s  The password for the private  key or PKCS#12 file\n", COL_GREEN, RESET);
-            printf("  %s--certs=<file>%s       A file containing PEM/ASN1 formatted client certificates\n", COL_GREEN, RESET);
-            printf("\n");
-            printf("  %s--ssl2%s               Only check if SSLv2 is enabled\n", COL_GREEN, RESET);
-            printf("  %s--ssl3%s               Only check if SSLv3 is enabled\n", COL_GREEN, RESET);
-            printf("  %s--tls10%s              Only check TLSv1.0 ciphers\n", COL_GREEN, RESET);
-#if OPENSSL_VERSION_NUMBER >= 0x10001000L
-            printf("  %s--tls11%s              Only check TLSv1.1 ciphers\n", COL_GREEN, RESET);
-            printf("  %s--tls12%s              Only check TLSv1.2 ciphers\n", COL_GREEN, RESET);
-            printf("  %s--tls13%s              Only check TLSv1.3 ciphers\n", COL_GREEN, RESET);
-#endif
-            printf("  %s--tlsall%s             Only check TLS ciphers (all versions)\n", COL_GREEN, RESET);
-            printf("  %s--show-ciphers%s       Show supported client ciphers\n", COL_GREEN, RESET);
-            printf("  %s--show-cipher-ids%s    Show cipher ids\n", COL_GREEN, RESET);
-            printf("  %s--iana-names%s         Use IANA/RFC cipher names rather than OpenSSL ones\n", COL_GREEN, RESET);
-            printf("  %s--show-times%s         Show handhake times in milliseconds\n", COL_GREEN, RESET);
-            printf("\n");
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L
-            printf("  %s--no-cipher-details%s  Disable EC curve names and EDH/RSA key lengths output\n", COL_GREEN, RESET);
-#endif
-            printf("  %s--no-ciphersuites%s    Do not check for supported ciphersuites\n", COL_GREEN, RESET);
-            printf("  %s--no-compression%s     Do not check for TLS compression (CRIME)\n", COL_GREEN, RESET);
-#ifdef SSL_MODE_SEND_FALLBACK_SCSV
-            printf("  %s--no-fallback%s        Do not check for TLS Fallback SCSV\n", COL_GREEN, RESET);
-#endif
-            printf("  %s--no-groups%s          Do not enumerate key exchange groups\n", COL_GREEN, RESET);
-            printf("  %s--no-heartbleed%s      Do not check for OpenSSL Heartbleed (CVE-2014-0160)\n", COL_GREEN, RESET);
-            printf("  %s--no-renegotiation%s   Do not check for TLS renegotiation\n", COL_GREEN, RESET);
-            printf("  %s--show-sigs%s          Enumerate signature algorithms\n", COL_GREEN, RESET);
-            printf("\n");
-            printf("  %s--starttls-ftp%s       STARTTLS setup for FTP\n", COL_GREEN, RESET);
-            printf("  %s--starttls-imap%s      STARTTLS setup for IMAP\n", COL_GREEN, RESET);
-            printf("  %s--starttls-irc%s       STARTTLS setup for IRC\n", COL_GREEN, RESET);
-            printf("  %s--starttls-ldap%s      STARTTLS setup for LDAP\n", COL_GREEN, RESET);
-            printf("  %s--starttls-mysql%s     STARTTLS setup for MYSQL\n", COL_GREEN, RESET);
-            printf("  %s--starttls-pop3%s      STARTTLS setup for POP3\n", COL_GREEN, RESET);
-            printf("  %s--starttls-psql%s      STARTTLS setup for PostgreSQL\n", COL_GREEN, RESET);
-            printf("  %s--starttls-smtp%s      STARTTLS setup for SMTP\n", COL_GREEN, RESET);
-            printf("  %s--starttls-xmpp%s      STARTTLS setup for XMPP\n", COL_GREEN, RESET);
-            printf("  %s--xmpp-server%s        Use a server-to-server XMPP handshake\n", COL_GREEN, RESET);
-            printf("  %s--rdp%s                Send RDP preamble before starting scan\n", COL_GREEN, RESET);
-            printf("\n");
-            printf("  %s--bugs%s               Enable SSL implementation bug work-arounds\n", COL_GREEN, RESET);
-            printf("  %s--no-colour%s          Disable coloured output\n", COL_GREEN, RESET);
-            printf("  %s--sleep=<msec>%s       Pause between connection request. Default is disabled\n", COL_GREEN, RESET);
-            printf("  %s--timeout=<sec>%s      Set socket timeout. Default is 3s\n", COL_GREEN, RESET);
-            printf("  %s--connect-timeout=<sec>%s  Set connect timeout. Default is 75s\n", COL_GREEN, RESET);
-            printf("  %s--verbose%s            Display verbose output\n", COL_GREEN, RESET);
-            printf("  %s--version%s            Display the program version\n", COL_GREEN, RESET);
-            printf("  %s--xml=<file>%s         Output results to an XML file. Use - for STDOUT.\n", COL_GREEN, RESET);
-            printf("  %s--help%s               Display the help text you are now reading\n\n", COL_GREEN, RESET);
-            printf("%sExample:%s\n", COL_BLUE, RESET);
-            printf("  %s%s 127.0.0.1%s\n", COL_GREEN, argv[0], RESET);
-            printf("  %s%s [::1]%s\n\n", COL_GREEN, argv[0], RESET);
-            break;
-
         // Check a single host/port ciphers...
         case mode_single:
-        case mode_multiple:
-            printf("Version: %s%s%s\n%s\n%s\n", COL_GREEN, VERSION, RESET,
-                    SSLeay_version(SSLEAY_VERSION), RESET);
-#if OPENSSL_VERSION_NUMBER < 0x10001000L
-            printf("\t\t%sOpenSSL version does not support TLSv1.1%s\n", COL_RED, RESET);
-            printf("\t\t%sTLSv1.1 ciphers will not be detected%s\n", COL_RED, RESET);
-            printf("\t\t%sOpenSSL version does not support TLSv1.2%s\n", COL_RED, RESET);
-            printf("\t\t%sTLSv1.2 ciphers will not be detected%s\n", COL_RED, RESET);
-#endif
 
             //SSLeay_add_all_algorithms();
             ERR_load_crypto_strings();
@@ -4324,79 +3890,7 @@ int main(int argc, char *argv[])
                     testHost(options);
                 }
             }
-            else
-            {
-                if (fileExists(argv[options->targets] + 10) == true)
-                {
-                    // Open targets file...
-                    targetsFile = fopen(argv[options->targets] + 10, "r");
-                    if (targetsFile == NULL)
-                    {
-                        printf_error("Could not open targets file %s.", argv[options->targets] + 10);
-                    }
-                    else
-                    {
-                        readLine(targetsFile, line, sizeof(line));
-                        while (feof(targetsFile) == 0)
-                        {
-                            if (strlen(line) != 0)
-                            {
-                                // Strip https:// from the start of the hostname
-                                if (strncmp(line, "https://", 8) == 0)
-                                {
-                                    memmove(line, line + 8, (strlen(line) - 8));
-                                    memset(line + (strlen(line) - 8), 0, 8);
-                                }
-                                // Get host...
-                                tempInt = 0;
-                                while ((line[tempInt] != 0) && (line[tempInt] != ':'))
-                                    tempInt++;
-                                line[tempInt] = 0;
-                                strncpy(options->host, line, sizeof(options->host) -1);
-
-                                if (!options->sni_set)
-                                {
-                                    strncpy(options->sniname, options->host, sizeof(options->host) -1);
-                                }
-
-                                // Get port (if it exists)...
-                                tempInt++;
-                                if (strlen(line + tempInt) > 0)
-                                {
-                                    int port;
-                                    port = atoi(line + tempInt);
-                                    // Invalid port
-                                    if (port == 0)
-                                    {
-                                        printf_error("Invalid port specified.");
-                                        exit(1);
-                                    }
-                                    else
-                                    {
-                                        options->port = port;
-                                    }
-                                }
-                                // Otherwise assume 443
-                                else
-                                {
-                                    options->port = 443;
-                                }
-
-                                // Test the host...
-                                if (testConnection(options))
-                                {
-                                    testHost(options);
-                                }
-                                printf("\n\n");
-                            }
-                            readLine(targetsFile, line, sizeof(line));
-                        }
-                    }
-                }
-                else
-                    printf_error("Targets file %s does not exist.", argv[options->targets] + 10);
-            }
-
+            
             // Free Structures
             while (options->ciphers != 0)
             {
@@ -4405,13 +3899,6 @@ int main(int argc, char *argv[])
                 options->ciphers = sslCipherPointer;
             }
             break;
-    }
-
-    // Close XML file, if required...
-    if ((xmlArg > 0) && (mode != mode_help))
-    {
-        fprintf(options->xmlOutput, "</document>\n");
-        fclose(options->xmlOutput);
     }
 
     return 0;
@@ -5972,29 +5459,14 @@ int testSignatureAlgorithms(struct sslCheckOptions *options) {
   return ret;
 }
 
-/* MinGW doesn't have a memmem() implementation. */
-#ifdef _WIN32
 
-/* Implementation taken from: https://sourceforge.net/p/mingw/msys2-runtime/ci/f21dc72d306bd98e55a08461a9530c4b0ce1dffe/tree/newlib/libc/string/memmem.c#l80 */
-/* Copyright (C) 2008 Eric Blake
- * Permission to use, copy, modify, and distribute this software
- * is freely granted, provided that this notice is preserved.*/
-void *memmem(const void *haystack_start, size_t haystack_len, const void *needle, size_t needle_len) {
-  const unsigned char *haystack = (const unsigned char *) haystack_start;
-  //const unsigned char *needle = (const unsigned char *) needle_start;
+void read_csv() {
 
-  if (needle_len == 0)
-    return (void *)haystack;
-
-  while (needle_len <= haystack_len)
-    {
-      if (!memcmp (haystack, needle, needle_len))
-        return (void *) haystack;
-      haystack++;
-      haystack_len--;
-    }
-  return NULL;
 }
-#endif
 
-/* vim :set ts=4 sw=4 sts=4 et : */
+
+int main() {
+    char host[512] = "www.baidu.com";
+    int port = 443;
+    test(host, port);
+}
