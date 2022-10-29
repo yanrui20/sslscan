@@ -330,13 +330,13 @@ int tcpConnectSocket(int socket, struct sslCheckOptions *options, char *error, i
 #define sock_errno errno
     if ((flags = fcntl(socket, F_GETFL, 0)) < 0)
     {
-        snprintf(error, errlen, "fcntl getfl: %s", sock_strerror(sock_errno));
+        // snprintf(error, errlen, "fcntl getfl: %s", sock_strerror(sock_errno));
         return status;
     }
 
     if (fcntl(socket, F_SETFL, flags | O_NONBLOCK) < 0)
     {
-        snprintf(error, errlen, "fcntl setfl: %s", sock_strerror(sock_errno));
+        // snprintf(error, errlen, "fcntl setfl: %s", sock_strerror(sock_errno));
         return status;
     }
 #endif
@@ -353,7 +353,7 @@ int tcpConnectSocket(int socket, struct sslCheckOptions *options, char *error, i
 
     if (status < 0 && sock_errno != INPROGRESS)
     {
-        snprintf(error, errlen, "connect: %s", sock_strerror(sock_errno));
+        // snprintf(error, errlen, "connect: %s", sock_strerror(sock_errno));
         return status;
     }
 
@@ -369,12 +369,12 @@ int tcpConnectSocket(int socket, struct sslCheckOptions *options, char *error, i
 
     if ((status = select(socket + 1, &rset, &wset, &eset, &tval)) == 0)
     {
-        snprintf(error, errlen, "connect: Timed out");
+        // snprintf(error, errlen, "connect: Timed out");
         return -1;
     }
     else if (status < 0)
     {
-        snprintf(error, errlen, "connect: select: %s", sock_strerror(sock_errno));
+        // snprintf(error, errlen, "connect: select: %s", sock_strerror(sock_errno));
         return status;
     }
 
@@ -383,14 +383,14 @@ int tcpConnectSocket(int socket, struct sslCheckOptions *options, char *error, i
         len = sizeof(errn);
         if (getsockopt(socket, SOL_SOCKET, SO_ERROR, (void *)&errn, (socklen_t *)&len) < 0)
         {
-            snprintf(error, errlen, "connect: getsockopt: %s", sock_strerror(errn));
+            // snprintf(error, errlen, "connect: getsockopt: %s", sock_strerror(errn));
             return -1;
         }
     }
 
     if (errn)
     {
-        snprintf(error, errlen, "connect: %s", sock_strerror(errn));
+        // snprintf(error, errlen, "connect: %s", sock_strerror(errn));
         return -1;
     }
 
@@ -405,7 +405,7 @@ int tcpConnectSocket(int socket, struct sslCheckOptions *options, char *error, i
 #else
     if (fcntl(socket, F_SETFL, flags) < 0)
     {
-        snprintf(error, errlen, "fcntl setfl: %s", sock_strerror(sock_errno));
+        // snprintf(error, errlen, "fcntl setfl: %s", sock_strerror(sock_errno));
         return -1;
     }
 #endif
@@ -440,7 +440,7 @@ int tcpConnect(struct sslCheckOptions *options)
 
     if(socketDescriptor < 0)
     {
-        printf_error("Could not open a socket.");
+        // printf_error("Could not open a socket.");
         return 0;
     }
 
@@ -459,298 +459,298 @@ int tcpConnect(struct sslCheckOptions *options)
 
     if(status < 0)
     {
-        printf_error("Could not open a connection to host %s (%s) on port %d (%s).", options->host, options->addrstr,
-                options->port, errmsg);
+        // printf_error("Could not open a connection to host %s (%s) on port %d (%s).", options->host, options->addrstr,
+        //         options->port, errmsg);
         close(socketDescriptor);
         return 0;
     }
 
     // If STARTTLS is required...
-    if (options->starttls_smtp == true && tlsStarted == false)
-    {
-        tlsStarted = 1;
-        if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-            return 0;
+    // if (options->starttls_smtp == true && tlsStarted == false)
+    // {
+    //     tlsStarted = 1;
+    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
+    //         return 0;
 
-        if (strncmp(buffer, "220", 3) != 0)
-        {
-            close(socketDescriptor);
-            printf_error("The host %s on port %d did not appear to be an SMTP service.", options->host, options->port);
-            return 0;
-        }
-        sendString(socketDescriptor, "EHLO example.org\r\n");
-        if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-            return 0;
-        if (strncmp(buffer, "250", 3) != 0)
-        {
-            close(socketDescriptor);
-            printf_error("The SMTP service on %s port %d did not respond with status 250 to our HELO.", options->host, options->port);
-            return 0;
-        }
-        sendString(socketDescriptor, "STARTTLS\r\n");
-        if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-            return 0;
-        if (strncmp(buffer, "220", 3) != 0)
-        {
-            close(socketDescriptor);
-            printf_error("The SMTP service on %s port %d did not appear to support STARTTLS.", options->host, options->port);
-            return 0;
-        }
-    }
+    //     if (strncmp(buffer, "220", 3) != 0)
+    //     {
+    //         close(socketDescriptor);
+    //         printf_error("The host %s on port %d did not appear to be an SMTP service.", options->host, options->port);
+    //         return 0;
+    //     }
+    //     sendString(socketDescriptor, "EHLO example.org\r\n");
+    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
+    //         return 0;
+    //     if (strncmp(buffer, "250", 3) != 0)
+    //     {
+    //         close(socketDescriptor);
+    //         printf_error("The SMTP service on %s port %d did not respond with status 250 to our HELO.", options->host, options->port);
+    //         return 0;
+    //     }
+    //     sendString(socketDescriptor, "STARTTLS\r\n");
+    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
+    //         return 0;
+    //     if (strncmp(buffer, "220", 3) != 0)
+    //     {
+    //         close(socketDescriptor);
+    //         printf_error("The SMTP service on %s port %d did not appear to support STARTTLS.", options->host, options->port);
+    //         return 0;
+    //     }
+    // }
 
-    if (options->starttls_mysql == true && tlsStarted == false)
-    {
-        tlsStarted = 1;
-        // Taken from https://github.com/tetlowgm/sslscan/blob/master/sslscan.c
+    // if (options->starttls_mysql == true && tlsStarted == false)
+    // {
+    //     tlsStarted = 1;
+    //     // Taken from https://github.com/tetlowgm/sslscan/blob/master/sslscan.c
 
-        const char mysqlssl[] = { 0x20, 0x00, 0x00, 0x01, 0x85, 0xae, 0x7f, 0x00,
-            0x00, 0x00, 0x00, 0x01, 0x21, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00};
+    //     const char mysqlssl[] = { 0x20, 0x00, 0x00, 0x01, 0x85, 0xae, 0x7f, 0x00,
+    //         0x00, 0x00, 0x00, 0x01, 0x21, 0x00, 0x00, 0x00,
+    //         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    //         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    //         0x00, 0x00, 0x00, 0x00};
 
-        if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-            return 0;
-        send(socketDescriptor, mysqlssl, sizeof(mysqlssl), 0);
-    }
+    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
+    //         return 0;
+    //     send(socketDescriptor, mysqlssl, sizeof(mysqlssl), 0);
+    // }
 
-    // We could use an XML parser but frankly it seems like a security disaster
-    if (options->starttls_xmpp == true && tlsStarted == false)
-    {
-        /* This is so ghetto, you cannot release it! */
-        char xmpp_setup[1024]; // options->host is 512 bytes long
-        /* XXX: TODO - options->host isn't always the host you want to test
-           eg:
-           talk.google.com actually expects gmail.com, not talk.google.com
-           jabber.ccc.de expects jabber.ccc.de
+    // // We could use an XML parser but frankly it seems like a security disaster
+    // if (options->starttls_xmpp == true && tlsStarted == false)
+    // {
+    //     /* This is so ghetto, you cannot release it! */
+    //     char xmpp_setup[1024]; // options->host is 512 bytes long
+    //     /* XXX: TODO - options->host isn't always the host you want to test
+    //        eg:
+    //        talk.google.com actually expects gmail.com, not talk.google.com
+    //        jabber.ccc.de expects jabber.ccc.de
 
-           It may be useful to provide a commandline switch to provide the
-           expected hostname.
-        */
-        // Server to server handshake
-        if (options->xmpp_server)
-        {
-            if (snprintf(xmpp_setup, sizeof(xmpp_setup), "<?xml version='1.0' ?>\r\n"
-                        "<stream:stream xmlns:stream='http://etherx.jabber.org/streams' xmlns='jabber:server' to='%s' version='1.0'>\r\n", options->host) >= sizeof(xmpp_setup)) {
-                printf("(internal error: xmpp_setup buffer too small)\n");
-                abort();
-            }
-        }
-        // Client to server handshake (default)
-        else
-        {
-            if (snprintf(xmpp_setup, sizeof(xmpp_setup), "<?xml version='1.0' ?>\r\n"
-                        "<stream:stream xmlns:stream='http://etherx.jabber.org/streams' xmlns='jabber:client' to='%s' version='1.0'>\r\n", options->host) >= sizeof(xmpp_setup)) {
-                printf("(internal error: xmpp_setup buffer too small)\n");
-                abort();
-            }
-        }
-        tlsStarted = 1;
-        sendString(socketDescriptor, xmpp_setup);
-        if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-            return 0;
+    //        It may be useful to provide a commandline switch to provide the
+    //        expected hostname.
+    //     */
+    //     // Server to server handshake
+    //     if (options->xmpp_server)
+    //     {
+    //         if (snprintf(xmpp_setup, sizeof(xmpp_setup), "<?xml version='1.0' ?>\r\n"
+    //                     "<stream:stream xmlns:stream='http://etherx.jabber.org/streams' xmlns='jabber:server' to='%s' version='1.0'>\r\n", options->host) >= sizeof(xmpp_setup)) {
+    //             printf("(internal error: xmpp_setup buffer too small)\n");
+    //             abort();
+    //         }
+    //     }
+    //     // Client to server handshake (default)
+    //     else
+    //     {
+    //         if (snprintf(xmpp_setup, sizeof(xmpp_setup), "<?xml version='1.0' ?>\r\n"
+    //                     "<stream:stream xmlns:stream='http://etherx.jabber.org/streams' xmlns='jabber:client' to='%s' version='1.0'>\r\n", options->host) >= sizeof(xmpp_setup)) {
+    //             printf("(internal error: xmpp_setup buffer too small)\n");
+    //             abort();
+    //         }
+    //     }
+    //     tlsStarted = 1;
+    //     sendString(socketDescriptor, xmpp_setup);
+    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
+    //         return 0;
 
-        printf_verbose("Server reported: %s\nAttempting to STARTTLS\n", buffer);
+    //     printf_verbose("Server reported: %s\nAttempting to STARTTLS\n", buffer);
 
-        sendString(socketDescriptor, "<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>\r\n");
-        if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-            return 0;
+    //     sendString(socketDescriptor, "<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>\r\n");
+    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
+    //         return 0;
 
-        /* We're looking for something like:
-        <starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'
-        If we find the end of the stream features before we find tls, we may
-        not have STARTTLS support. */
-        if (strstr(buffer, "urn:ietf:params:xml:ns:xmpp-tls")) {
-            printf_verbose("It appears that xmpp-tls was detected.\n");
-        } else if (strstr(buffer, "/stream:features")) {
-            printf_verbose("It appears that xmpp-tls was not detected.\n");
-        }
+    //     /* We're looking for something like:
+    //     <starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'
+    //     If we find the end of the stream features before we find tls, we may
+    //     not have STARTTLS support. */
+    //     if (strstr(buffer, "urn:ietf:params:xml:ns:xmpp-tls")) {
+    //         printf_verbose("It appears that xmpp-tls was detected.\n");
+    //     } else if (strstr(buffer, "/stream:features")) {
+    //         printf_verbose("It appears that xmpp-tls was not detected.\n");
+    //     }
 
-        if (options->verbose)
-            printf("Server reported: %s\n", buffer);
+    //     if (options->verbose)
+    //         printf("Server reported: %s\n", buffer);
 
-        if (strstr(buffer, "<proceed"))
-        {
-            printf_verbose("It appears that xmpp-tls is ready for TLS.\n");
-        }
-        else
-        {
-            if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-                return 0;
-        }
+    //     if (strstr(buffer, "<proceed"))
+    //     {
+    //         printf_verbose("It appears that xmpp-tls is ready for TLS.\n");
+    //     }
+    //     else
+    //     {
+    //         if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
+    //             return 0;
+    //     }
 
-        printf_verbose("Server reported: %s\n", buffer);
+    //     printf_verbose("Server reported: %s\n", buffer);
 
-    }
+    // }
 
-    // Setup a POP3 STARTTLS socket
-    if (options->starttls_pop3 == true && tlsStarted == false)
-    {
-        tlsStarted = 1;
-        if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-            return 0;
-        printf_verbose("Server reported: %s\n", buffer);
+    // // Setup a POP3 STARTTLS socket
+    // if (options->starttls_pop3 == true && tlsStarted == false)
+    // {
+    //     tlsStarted = 1;
+    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
+    //         return 0;
+    //     printf_verbose("Server reported: %s\n", buffer);
 
-        sendString(socketDescriptor, "STLS\r\n");
-        if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-            return 0;
-        // We probably want to confirm that we see something like:
-        // '+OK Begin SSL/TLS negotiation now.'
-        // Or
-        // '+OK Begin TLS negotiation, mate'
-        if (strstr(buffer, "+OK Begin")) {
-            printf_verbose("It appears that the POP3 server is ready for TLS.\n");
-        }
-        printf_verbose("Server reported: %s\n", buffer);
-    }
+    //     sendString(socketDescriptor, "STLS\r\n");
+    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
+    //         return 0;
+    //     // We probably want to confirm that we see something like:
+    //     // '+OK Begin SSL/TLS negotiation now.'
+    //     // Or
+    //     // '+OK Begin TLS negotiation, mate'
+    //     if (strstr(buffer, "+OK Begin")) {
+    //         printf_verbose("It appears that the POP3 server is ready for TLS.\n");
+    //     }
+    //     printf_verbose("Server reported: %s\n", buffer);
+    // }
 
-    // Setup an IMAP STARTTLS socket
-    if (options->starttls_imap == true && tlsStarted == false)
-    {
-        tlsStarted = 1;
-        memset(buffer, 0, BUFFERSIZE);
+    // // Setup an IMAP STARTTLS socket
+    // if (options->starttls_imap == true && tlsStarted == false)
+    // {
+    //     tlsStarted = 1;
+    //     memset(buffer, 0, BUFFERSIZE);
 
-        // Fetch the IMAP banner
-        if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-            return 0;
-        printf_verbose("Server banner: %s\n", buffer);
+    //     // Fetch the IMAP banner
+    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
+    //         return 0;
+    //     printf_verbose("Server banner: %s\n", buffer);
 
-        // Attempt to STARTTLS
-        sendString(socketDescriptor, ". STARTTLS\r\n");
-        if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-            return 0;
+    //     // Attempt to STARTTLS
+    //     sendString(socketDescriptor, ". STARTTLS\r\n");
+    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
+    //         return 0;
 
-        if (strstr(buffer, ". OK") || strstr(buffer, " . OK")){
-            printf_verbose("STARTLS IMAP setup complete.\nServer reported: %s\n", buffer);
-        } else{
-            printf_verbose("STARTLS IMAP setup not complete.\nServer reported: %s\n", buffer);
-        }
-    }
+    //     if (strstr(buffer, ". OK") || strstr(buffer, " . OK")){
+    //         printf_verbose("STARTLS IMAP setup complete.\nServer reported: %s\n", buffer);
+    //     } else{
+    //         printf_verbose("STARTLS IMAP setup not complete.\nServer reported: %s\n", buffer);
+    //     }
+    // }
 
-    if (options->starttls_irc == true && tlsStarted == false)
-    {
-        tlsStarted = 1;
-        if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-            return 0;
-        printf_verbose("Server reported: %s\n", buffer);
+    // if (options->starttls_irc == true && tlsStarted == false)
+    // {
+    //     tlsStarted = 1;
+    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
+    //         return 0;
+    //     printf_verbose("Server reported: %s\n", buffer);
 
-        // Attempt to STARTTLS
-        sendString(socketDescriptor, "STARTTLS\r\n");
-        if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-            return 0;
+    //     // Attempt to STARTTLS
+    //     sendString(socketDescriptor, "STARTTLS\r\n");
+    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
+    //         return 0;
 
-        if (strstr(buffer, " 670 ") || strstr(buffer, ":STARTTLS successful")) {
-            printf_verbose("STARTLS IRC setup complete.\nServer reported %s\n", buffer);
-        } else {
-            printf_verbose("STARTLS IRC setup not complete.\nServer reported %s\n", buffer);
-        }
-    }
+    //     if (strstr(buffer, " 670 ") || strstr(buffer, ":STARTTLS successful")) {
+    //         printf_verbose("STARTLS IRC setup complete.\nServer reported %s\n", buffer);
+    //     } else {
+    //         printf_verbose("STARTLS IRC setup not complete.\nServer reported %s\n", buffer);
+    //     }
+    // }
 
-    // Setup a LDAP STARTTLS socket
-    if (options->starttls_ldap == true && tlsStarted == false)
-    {
-        tlsStarted = 1;
-        memset(buffer, 0, BUFFERSIZE);
-        char starttls[] = {'0', 0x1d, 0x02, 0x01, 0x01, 'w', 0x18, 0x80, 0x16,
-            '1', '.', '3', '.', '6', '.', '1', '.', '4', '.', '1', '.',
-            '1', '4', '6', '6', '.', '2', '0', '0', '3', '7'};
-        char ok[] = "1.3.6.1.4.1.1466.20037";
-        char unsupported[] = "unsupported extended operation";
+    // // Setup a LDAP STARTTLS socket
+    // if (options->starttls_ldap == true && tlsStarted == false)
+    // {
+    //     tlsStarted = 1;
+    //     memset(buffer, 0, BUFFERSIZE);
+    //     char starttls[] = {'0', 0x1d, 0x02, 0x01, 0x01, 'w', 0x18, 0x80, 0x16,
+    //         '1', '.', '3', '.', '6', '.', '1', '.', '4', '.', '1', '.',
+    //         '1', '4', '6', '6', '.', '2', '0', '0', '3', '7'};
+    //     char ok[] = "1.3.6.1.4.1.1466.20037";
+    //     char unsupported[] = "unsupported extended operation";
 
-        // Send TLS
-        send(socketDescriptor, starttls, sizeof(starttls), 0);
-        if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-            return 0;
+    //     // Send TLS
+    //     send(socketDescriptor, starttls, sizeof(starttls), 0);
+    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
+    //         return 0;
 
-        if (memmem(buffer, BUFFERSIZE, ok, strlen(ok))) {
-            printf_verbose("STARTLS LDAP setup complete.\n");
-        }
-        else if (strstr(buffer, unsupported)) {
-            printf_error("STARTLS LDAP connection to %s:%d failed with '%s'.",
-                         options->host, options->port, unsupported);
-            return 0;
-        } else {
-            printf_error("STARTLS LDAP connection to %s:%d failed with unknown error.",
-                         options->host, options->port);
-            return 0;
-        }
-    }
+    //     if (memmem(buffer, BUFFERSIZE, ok, strlen(ok))) {
+    //         printf_verbose("STARTLS LDAP setup complete.\n");
+    //     }
+    //     else if (strstr(buffer, unsupported)) {
+    //         printf_error("STARTLS LDAP connection to %s:%d failed with '%s'.",
+    //                      options->host, options->port, unsupported);
+    //         return 0;
+    //     } else {
+    //         printf_error("STARTLS LDAP connection to %s:%d failed with unknown error.",
+    //                      options->host, options->port);
+    //         return 0;
+    //     }
+    // }
 
-    // Setup a FTP STARTTLS socket
-    if (options->starttls_ftp == true && tlsStarted == false)
-    {
-        tlsStarted = 1;
+    // // Setup a FTP STARTTLS socket
+    // if (options->starttls_ftp == true && tlsStarted == false)
+    // {
+    //     tlsStarted = 1;
 
-        // Fetch the server banner
-        if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-            return 0;
-        printf_verbose("Server banner: %s\n", buffer);
+    //     // Fetch the server banner
+    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
+    //         return 0;
+    //     printf_verbose("Server banner: %s\n", buffer);
 
-        // Send TLS request
-        sendString(socketDescriptor, "AUTH TLS\r\n");
-        if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-            return 0;
-        if (strstr(buffer, "234 AUTH TLS successful")) {
-            printf_verbose("STARTLS FTP setup complete.\n");
-        } else {
-            printf_verbose("STARTLS FTP setup possibly not complete.\n");
-        }
-        printf_verbose("Server reported: %s\n", buffer);
-    }
+    //     // Send TLS request
+    //     sendString(socketDescriptor, "AUTH TLS\r\n");
+    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
+    //         return 0;
+    //     if (strstr(buffer, "234 AUTH TLS successful")) {
+    //         printf_verbose("STARTLS FTP setup complete.\n");
+    //     } else {
+    //         printf_verbose("STARTLS FTP setup possibly not complete.\n");
+    //     }
+    //     printf_verbose("Server reported: %s\n", buffer);
+    // }
 
-    if (options->starttls_psql == true && tlsStarted == false)
-    {
-        unsigned char buffer;
+    // if (options->starttls_psql == true && tlsStarted == false)
+    // {
+    //     unsigned char buffer;
 
-        tlsStarted = 1;
+    //     tlsStarted = 1;
 
-        // Send SSLRequest packet
-        send(socketDescriptor, "\x00\x00\x00\x08\x04\xd2\x16\x2f", 8, 0);
+    //     // Send SSLRequest packet
+    //     send(socketDescriptor, "\x00\x00\x00\x08\x04\xd2\x16\x2f", 8, 0);
 
-        // Read reply byte
-        if (1 != recv(socketDescriptor, &buffer, 1, 0)) {
-            printf_error("Unexpected EOF reading from %s:%d", options->host, options->port);
-            return 0;
-        }
+    //     // Read reply byte
+    //     if (1 != recv(socketDescriptor, &buffer, 1, 0)) {
+    //         printf_error("Unexpected EOF reading from %s:%d", options->host, options->port);
+    //         return 0;
+    //     }
 
-        if (buffer != 'S') {
-            printf_error("Server at %s:%d rejected TLS startup", options->host, options->port);
-            return 0;
-        }
-    }
+    //     if (buffer != 'S') {
+    //         printf_error("Server at %s:%d rejected TLS startup", options->host, options->port);
+    //         return 0;
+    //     }
+    // }
 
-    // Setup an RDP socket with preamble
-    // Borrowed from https://labs.portcullis.co.uk/tools/ssl-cipher-suite-enum/
-    if (options->rdp == true && tlsStarted == false)
-    {
-        unsigned char buffer[32768];
-        size_t readlen;
+    // // Setup an RDP socket with preamble
+    // // Borrowed from https://labs.portcullis.co.uk/tools/ssl-cipher-suite-enum/
+    // if (options->rdp == true && tlsStarted == false)
+    // {
+    //     unsigned char buffer[32768];
+    //     size_t readlen;
 
-        tlsStarted = 1;
+    //     tlsStarted = 1;
 
-        // Send RDP preamble
-        send(socketDescriptor, "\x03\x00\x00\x13\x0e\xe0\x00\x00\x00\x00\x00\x01\x00\x08\x00\x03\x00\x00\x00", 19, 0);
+    //     // Send RDP preamble
+    //     send(socketDescriptor, "\x03\x00\x00\x13\x0e\xe0\x00\x00\x00\x00\x00\x01\x00\x08\x00\x03\x00\x00\x00", 19, 0);
 
-        // Read reply header
-        if (4 != recv(socketDescriptor, buffer, 4, 0)) {
-            printf_error("Unexpected EOF reading from %s:%d", options->host, options->port);
-            return 0;
-        }
+    //     // Read reply header
+    //     if (4 != recv(socketDescriptor, buffer, 4, 0)) {
+    //         printf_error("Unexpected EOF reading from %s:%d", options->host, options->port);
+    //         return 0;
+    //     }
 
-        // Calculate remaining bytes (and check for overflows)
-        readlen = ((buffer[2] & 0x7f) << 8) + buffer[3] - 4;
-        if (readlen > sizeof(buffer)) {
-            printf_error("Unexpected data from %s:%d", options->host, options->port);
-            return 0;
+    //     // Calculate remaining bytes (and check for overflows)
+    //     readlen = ((buffer[2] & 0x7f) << 8) + buffer[3] - 4;
+    //     if (readlen > sizeof(buffer)) {
+    //         printf_error("Unexpected data from %s:%d", options->host, options->port);
+    //         return 0;
 
-        }
+    //     }
 
-        // Read reply data
-        if (readlen != recv(socketDescriptor, buffer, readlen, 0)) {
-            printf_error("Unexpected EOF reading from %s:%d", options->host, options->port);
-            return 0;
-        }
-    }
+    //     // Read reply data
+    //     if (readlen != recv(socketDescriptor, buffer, readlen, 0)) {
+    //         printf_error("Unexpected EOF reading from %s:%d", options->host, options->port);
+    //         return 0;
+    //     }
+    // }
 
     // Return
     return socketDescriptor;
@@ -3367,7 +3367,7 @@ int testConnection(struct sslCheckOptions *options)
     // Perform the actual lookup.
     if (getaddrinfo(options->host, NULL, &hints, &addrinfoResult) != 0)
     {
-        printf_error("Could not resolve hostname %s.", options->host);
+        // printf_error("Could not resolve hostname %s.", options->host);
         return false;
     }
 
@@ -3395,7 +3395,7 @@ int testConnection(struct sslCheckOptions *options)
         {
             close(socketDescriptor);
             freeaddrinfo(addrinfoResult); addrinfoResult = NULL;
-            printf("%sConnected to %s%s\n\n", COL_GREEN, options->addrstr, RESET);
+            // printf("%sConnected to %s%s\n\n", COL_GREEN, options->addrstr, RESET);
             return true;
         }
     }
@@ -3748,7 +3748,7 @@ int testHost(struct sslCheckOptions *options)
 }
 
 
-int test(char* hostString, int port)
+void test(struct result * res, int port)
 {
     // Variables...
     struct sslCheckOptions sslOptions;
@@ -3760,7 +3760,6 @@ int test(char* hostString, int port)
     // Init...
     memset(&sslOptions, 0, sizeof(struct sslCheckOptions));
     sslOptions.port = 0;
-    // xmlArg = 0;
     strncpy(sslOptions.host, "127.0.0.1", 10);
     sslOptions.showCertificate = false;
     sslOptions.showTrustedCAs = false;
@@ -3792,7 +3791,7 @@ int test(char* hostString, int port)
     sslOptions.ocspStatus = false;
 
     // Default socket timeout 3s
-    sslOptions.timeout.tv_sec = 3;
+    sslOptions.timeout.tv_sec = 1;
     sslOptions.timeout.tv_usec = 0;
     // Default connect timeout 75s
     sslOptions.connect_timeout = 3;
@@ -3810,7 +3809,7 @@ int test(char* hostString, int port)
     // IPv6 [] address parsing by DinoTools/phibos
     tempInt = 0;
     // char *hostString = argv[argLoop];
-
+    char* hostString = res->host;
     maxSize = strlen(hostString);
 
     if (strncmp((char*)hostString, "https://", 8) == 0)
@@ -3871,8 +3870,8 @@ int test(char* hostString, int port)
     options->port = port;
     
 
-    // Build the list of ciphers missing from OpenSSL.
-    findMissingCiphers();
+    // // Build the list of ciphers missing from OpenSSL.
+    // findMissingCiphers();
 
     switch (mode)
     {
@@ -3888,6 +3887,9 @@ int test(char* hostString, int port)
                 if (testConnection(options))
                 {
                     testHost(options);
+                } 
+                else {
+                    res->connect_error = true;
                 }
             }
             
@@ -3900,8 +3902,6 @@ int test(char* hostString, int port)
             }
             break;
     }
-
-    return 0;
 }
 
 int runSSLv2Test(struct sslCheckOptions *options) {
@@ -5485,15 +5485,19 @@ void read_csv(struct result * ret, char *path) {
 }
 
 int main() {
-    // char test_host[512] = "baidu.com";
+    // char test_host[512] = "yahoo.com";
+    // Build the list of ciphers missing from OpenSSL.
+    findMissingCiphers();
+
     int port = 443;
     int line_number_max = 750000;
     struct result * res = (struct result *)malloc(sizeof(struct result) * line_number_max);
     memset(res, 0, sizeof(struct result) * line_number_max);
     read_csv(res, "./test.csv");
     for (int i = 0; res[i].index != 0 && i <= 3; i++) {
-        test(res[i].host, port);
+        test(&res[i], port);
     }
-    
+    // test(test_host, port);
+
     FREE(res);
 }
