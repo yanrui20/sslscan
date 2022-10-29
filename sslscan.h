@@ -214,7 +214,7 @@ struct sslCheckOptions
 struct result {
     int index;
     char host[512];
-    bool connect_error;
+    char connect_error;
     char tls_version; // sslv2 sslv3 tls1.0 tls1.1 tls1.2 tls1.3
     char reneg; // secure support
     char heartbleed; // tls1.0 tls1.1 tls1.2
@@ -222,9 +222,10 @@ struct result {
     char fs; // ???
     int exchange_key_strength;
     int certificate_key_strength;
-    bool ev;
+    char ev;
     // char certificate; // iv dv ov ev
-    bool protocol_downgrade;
+    char protocol_downgrade; // protocol_downgrade fallback_scsv
+
 };
 
 // store renegotiation test data
@@ -368,7 +369,7 @@ int freeRenegotiationOutput(struct renegotiationOutput *);
 int testCompression(struct sslCheckOptions *, const SSL_METHOD *);
 int testRenegotiation(struct sslCheckOptions *, const SSL_METHOD *);
 #ifdef SSL_MODE_SEND_FALLBACK_SCSV
-int testfallback(struct sslCheckOptions *, const SSL_METHOD *);
+int testfallback(struct sslCheckOptions *, const SSL_METHOD *, struct result* );
 #endif
 int testHeartbleed(struct sslCheckOptions *, const SSL_METHOD *);
 int testSupportedGroups(struct sslCheckOptions *options);
@@ -377,7 +378,7 @@ int testCipher(struct sslCheckOptions *, const SSL_METHOD *);
 int testMissingCiphers(struct sslCheckOptions *options, unsigned int version);
 int testProtocolCiphers(struct sslCheckOptions *, const SSL_METHOD *);
 int testConnection(struct sslCheckOptions *);
-int testHost(struct sslCheckOptions *);
+int testHost(struct sslCheckOptions *, struct result *);
 int loadCerts(struct sslCheckOptions *);
 int checkCertificateProtocols(struct sslCheckOptions *, const SSL_METHOD *);
 int checkCertificate(struct sslCheckOptions *, const SSL_METHOD *);

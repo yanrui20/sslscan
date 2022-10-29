@@ -465,293 +465,6 @@ int tcpConnect(struct sslCheckOptions *options)
         return 0;
     }
 
-    // If STARTTLS is required...
-    // if (options->starttls_smtp == true && tlsStarted == false)
-    // {
-    //     tlsStarted = 1;
-    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-    //         return 0;
-
-    //     if (strncmp(buffer, "220", 3) != 0)
-    //     {
-    //         close(socketDescriptor);
-    //         printf_error("The host %s on port %d did not appear to be an SMTP service.", options->host, options->port);
-    //         return 0;
-    //     }
-    //     sendString(socketDescriptor, "EHLO example.org\r\n");
-    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-    //         return 0;
-    //     if (strncmp(buffer, "250", 3) != 0)
-    //     {
-    //         close(socketDescriptor);
-    //         printf_error("The SMTP service on %s port %d did not respond with status 250 to our HELO.", options->host, options->port);
-    //         return 0;
-    //     }
-    //     sendString(socketDescriptor, "STARTTLS\r\n");
-    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-    //         return 0;
-    //     if (strncmp(buffer, "220", 3) != 0)
-    //     {
-    //         close(socketDescriptor);
-    //         printf_error("The SMTP service on %s port %d did not appear to support STARTTLS.", options->host, options->port);
-    //         return 0;
-    //     }
-    // }
-
-    // if (options->starttls_mysql == true && tlsStarted == false)
-    // {
-    //     tlsStarted = 1;
-    //     // Taken from https://github.com/tetlowgm/sslscan/blob/master/sslscan.c
-
-    //     const char mysqlssl[] = { 0x20, 0x00, 0x00, 0x01, 0x85, 0xae, 0x7f, 0x00,
-    //         0x00, 0x00, 0x00, 0x01, 0x21, 0x00, 0x00, 0x00,
-    //         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    //         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    //         0x00, 0x00, 0x00, 0x00};
-
-    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-    //         return 0;
-    //     send(socketDescriptor, mysqlssl, sizeof(mysqlssl), 0);
-    // }
-
-    // // We could use an XML parser but frankly it seems like a security disaster
-    // if (options->starttls_xmpp == true && tlsStarted == false)
-    // {
-    //     /* This is so ghetto, you cannot release it! */
-    //     char xmpp_setup[1024]; // options->host is 512 bytes long
-    //     /* XXX: TODO - options->host isn't always the host you want to test
-    //        eg:
-    //        talk.google.com actually expects gmail.com, not talk.google.com
-    //        jabber.ccc.de expects jabber.ccc.de
-
-    //        It may be useful to provide a commandline switch to provide the
-    //        expected hostname.
-    //     */
-    //     // Server to server handshake
-    //     if (options->xmpp_server)
-    //     {
-    //         if (snprintf(xmpp_setup, sizeof(xmpp_setup), "<?xml version='1.0' ?>\r\n"
-    //                     "<stream:stream xmlns:stream='http://etherx.jabber.org/streams' xmlns='jabber:server' to='%s' version='1.0'>\r\n", options->host) >= sizeof(xmpp_setup)) {
-    //             printf("(internal error: xmpp_setup buffer too small)\n");
-    //             abort();
-    //         }
-    //     }
-    //     // Client to server handshake (default)
-    //     else
-    //     {
-    //         if (snprintf(xmpp_setup, sizeof(xmpp_setup), "<?xml version='1.0' ?>\r\n"
-    //                     "<stream:stream xmlns:stream='http://etherx.jabber.org/streams' xmlns='jabber:client' to='%s' version='1.0'>\r\n", options->host) >= sizeof(xmpp_setup)) {
-    //             printf("(internal error: xmpp_setup buffer too small)\n");
-    //             abort();
-    //         }
-    //     }
-    //     tlsStarted = 1;
-    //     sendString(socketDescriptor, xmpp_setup);
-    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-    //         return 0;
-
-    //     printf_verbose("Server reported: %s\nAttempting to STARTTLS\n", buffer);
-
-    //     sendString(socketDescriptor, "<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>\r\n");
-    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-    //         return 0;
-
-    //     /* We're looking for something like:
-    //     <starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'
-    //     If we find the end of the stream features before we find tls, we may
-    //     not have STARTTLS support. */
-    //     if (strstr(buffer, "urn:ietf:params:xml:ns:xmpp-tls")) {
-    //         printf_verbose("It appears that xmpp-tls was detected.\n");
-    //     } else if (strstr(buffer, "/stream:features")) {
-    //         printf_verbose("It appears that xmpp-tls was not detected.\n");
-    //     }
-
-    //     if (options->verbose)
-    //         printf("Server reported: %s\n", buffer);
-
-    //     if (strstr(buffer, "<proceed"))
-    //     {
-    //         printf_verbose("It appears that xmpp-tls is ready for TLS.\n");
-    //     }
-    //     else
-    //     {
-    //         if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-    //             return 0;
-    //     }
-
-    //     printf_verbose("Server reported: %s\n", buffer);
-
-    // }
-
-    // // Setup a POP3 STARTTLS socket
-    // if (options->starttls_pop3 == true && tlsStarted == false)
-    // {
-    //     tlsStarted = 1;
-    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-    //         return 0;
-    //     printf_verbose("Server reported: %s\n", buffer);
-
-    //     sendString(socketDescriptor, "STLS\r\n");
-    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-    //         return 0;
-    //     // We probably want to confirm that we see something like:
-    //     // '+OK Begin SSL/TLS negotiation now.'
-    //     // Or
-    //     // '+OK Begin TLS negotiation, mate'
-    //     if (strstr(buffer, "+OK Begin")) {
-    //         printf_verbose("It appears that the POP3 server is ready for TLS.\n");
-    //     }
-    //     printf_verbose("Server reported: %s\n", buffer);
-    // }
-
-    // // Setup an IMAP STARTTLS socket
-    // if (options->starttls_imap == true && tlsStarted == false)
-    // {
-    //     tlsStarted = 1;
-    //     memset(buffer, 0, BUFFERSIZE);
-
-    //     // Fetch the IMAP banner
-    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-    //         return 0;
-    //     printf_verbose("Server banner: %s\n", buffer);
-
-    //     // Attempt to STARTTLS
-    //     sendString(socketDescriptor, ". STARTTLS\r\n");
-    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-    //         return 0;
-
-    //     if (strstr(buffer, ". OK") || strstr(buffer, " . OK")){
-    //         printf_verbose("STARTLS IMAP setup complete.\nServer reported: %s\n", buffer);
-    //     } else{
-    //         printf_verbose("STARTLS IMAP setup not complete.\nServer reported: %s\n", buffer);
-    //     }
-    // }
-
-    // if (options->starttls_irc == true && tlsStarted == false)
-    // {
-    //     tlsStarted = 1;
-    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-    //         return 0;
-    //     printf_verbose("Server reported: %s\n", buffer);
-
-    //     // Attempt to STARTTLS
-    //     sendString(socketDescriptor, "STARTTLS\r\n");
-    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-    //         return 0;
-
-    //     if (strstr(buffer, " 670 ") || strstr(buffer, ":STARTTLS successful")) {
-    //         printf_verbose("STARTLS IRC setup complete.\nServer reported %s\n", buffer);
-    //     } else {
-    //         printf_verbose("STARTLS IRC setup not complete.\nServer reported %s\n", buffer);
-    //     }
-    // }
-
-    // // Setup a LDAP STARTTLS socket
-    // if (options->starttls_ldap == true && tlsStarted == false)
-    // {
-    //     tlsStarted = 1;
-    //     memset(buffer, 0, BUFFERSIZE);
-    //     char starttls[] = {'0', 0x1d, 0x02, 0x01, 0x01, 'w', 0x18, 0x80, 0x16,
-    //         '1', '.', '3', '.', '6', '.', '1', '.', '4', '.', '1', '.',
-    //         '1', '4', '6', '6', '.', '2', '0', '0', '3', '7'};
-    //     char ok[] = "1.3.6.1.4.1.1466.20037";
-    //     char unsupported[] = "unsupported extended operation";
-
-    //     // Send TLS
-    //     send(socketDescriptor, starttls, sizeof(starttls), 0);
-    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-    //         return 0;
-
-    //     if (memmem(buffer, BUFFERSIZE, ok, strlen(ok))) {
-    //         printf_verbose("STARTLS LDAP setup complete.\n");
-    //     }
-    //     else if (strstr(buffer, unsupported)) {
-    //         printf_error("STARTLS LDAP connection to %s:%d failed with '%s'.",
-    //                      options->host, options->port, unsupported);
-    //         return 0;
-    //     } else {
-    //         printf_error("STARTLS LDAP connection to %s:%d failed with unknown error.",
-    //                      options->host, options->port);
-    //         return 0;
-    //     }
-    // }
-
-    // // Setup a FTP STARTTLS socket
-    // if (options->starttls_ftp == true && tlsStarted == false)
-    // {
-    //     tlsStarted = 1;
-
-    //     // Fetch the server banner
-    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-    //         return 0;
-    //     printf_verbose("Server banner: %s\n", buffer);
-
-    //     // Send TLS request
-    //     sendString(socketDescriptor, "AUTH TLS\r\n");
-    //     if (!readOrLogAndClose(socketDescriptor, buffer, BUFFERSIZE, options))
-    //         return 0;
-    //     if (strstr(buffer, "234 AUTH TLS successful")) {
-    //         printf_verbose("STARTLS FTP setup complete.\n");
-    //     } else {
-    //         printf_verbose("STARTLS FTP setup possibly not complete.\n");
-    //     }
-    //     printf_verbose("Server reported: %s\n", buffer);
-    // }
-
-    // if (options->starttls_psql == true && tlsStarted == false)
-    // {
-    //     unsigned char buffer;
-
-    //     tlsStarted = 1;
-
-    //     // Send SSLRequest packet
-    //     send(socketDescriptor, "\x00\x00\x00\x08\x04\xd2\x16\x2f", 8, 0);
-
-    //     // Read reply byte
-    //     if (1 != recv(socketDescriptor, &buffer, 1, 0)) {
-    //         printf_error("Unexpected EOF reading from %s:%d", options->host, options->port);
-    //         return 0;
-    //     }
-
-    //     if (buffer != 'S') {
-    //         printf_error("Server at %s:%d rejected TLS startup", options->host, options->port);
-    //         return 0;
-    //     }
-    // }
-
-    // // Setup an RDP socket with preamble
-    // // Borrowed from https://labs.portcullis.co.uk/tools/ssl-cipher-suite-enum/
-    // if (options->rdp == true && tlsStarted == false)
-    // {
-    //     unsigned char buffer[32768];
-    //     size_t readlen;
-
-    //     tlsStarted = 1;
-
-    //     // Send RDP preamble
-    //     send(socketDescriptor, "\x03\x00\x00\x13\x0e\xe0\x00\x00\x00\x00\x00\x01\x00\x08\x00\x03\x00\x00\x00", 19, 0);
-
-    //     // Read reply header
-    //     if (4 != recv(socketDescriptor, buffer, 4, 0)) {
-    //         printf_error("Unexpected EOF reading from %s:%d", options->host, options->port);
-    //         return 0;
-    //     }
-
-    //     // Calculate remaining bytes (and check for overflows)
-    //     readlen = ((buffer[2] & 0x7f) << 8) + buffer[3] - 4;
-    //     if (readlen > sizeof(buffer)) {
-    //         printf_error("Unexpected data from %s:%d", options->host, options->port);
-    //         return 0;
-
-    //     }
-
-    //     // Read reply data
-    //     if (readlen != recv(socketDescriptor, buffer, readlen, 0)) {
-    //         printf_error("Unexpected EOF reading from %s:%d", options->host, options->port);
-    //         return 0;
-    //     }
-    // }
-
     // Return
     return socketDescriptor;
 }
@@ -1083,7 +796,7 @@ int testCompression(struct sslCheckOptions *options, const SSL_METHOD *sslMethod
 
 #ifdef SSL_MODE_SEND_FALLBACK_SCSV
 // Check for TLS_FALLBACK_SCSV
-int testFallback(struct sslCheckOptions *options,  const SSL_METHOD *sslMethod)
+int testFallback(struct sslCheckOptions *options,  const SSL_METHOD *sslMethod, struct result* res)
 {
     // Variables...
     int status = true;
@@ -1119,8 +832,8 @@ int testFallback(struct sslCheckOptions *options,  const SSL_METHOD *sslMethod)
             {
 
                 // Load Certs if required...
-                if ((options->clientCertsFile != 0) || (options->privateKeyFile != 0))
-                    status = loadCerts(options);
+                // if ((options->clientCertsFile != 0) || (options->privateKeyFile != 0))
+                //     status = loadCerts(options);
 
                 if (status == true)
                 {
@@ -1138,7 +851,7 @@ int testFallback(struct sslCheckOptions *options,  const SSL_METHOD *sslMethod)
                     SSL_clear_options(ssl, SSL_OP_NO_COMPRESSION);
 #endif
 
-                   if (ssl != NULL)
+                    if (ssl != NULL)
                     {
                         // Connect socket and BIO
                         cipherConnectionBio = BIO_new_socket(socketDescriptor, BIO_NOCLOSE);
@@ -1152,6 +865,7 @@ int testFallback(struct sslCheckOptions *options,  const SSL_METHOD *sslMethod)
 #endif
 
                         // Connect SSL over socket
+                        // SSL_connect正常连接返回 > 0 , 其余返回 <= 0
                         connStatus = SSL_connect(ssl);
                         if (connStatus > 0)
                         {
@@ -1164,48 +878,46 @@ int testFallback(struct sslCheckOptions *options,  const SSL_METHOD *sslMethod)
                                 }
                                 else if (sslversion == TLS1_2_VERSION)
                                 {
-				  secondMethod = TLSv1_1_client_method();
+				                    secondMethod = TLSv1_1_client_method();
                                 }
-				else if (sslversion == TLS1_VERSION)
-				{
-				  secondMethod = TLSv1_client_method();
-				}
-				else if (sslversion == TLS1_VERSION)
-				{
-				  printf("Server only supports TLSv1.0");
-				  status = false;
-				}
-				else
-				{
-				  printf("Server doesn't support TLS - skipping TLS Fallback SCSV check\n\n");
-				  status = false;
-				}
+                                else if (sslversion == TLS1_VERSION)
+                                {
+                                    secondMethod = TLSv1_client_method();
+                                }
+                                else
+                                {
+                                    // printf("Server doesn't support TLS - skipping TLS Fallback SCSV check\n\n");
+                                    status = false;
+                                }
                             }
                             else
                             {
-                                printf("Server %sdoes not%s support TLS Fallback SCSV\n\n", COL_RED, RESET);
-                                printf_xml("  <fallback supported=\"0\" />\n");
+                                // printf("Server %sdoes not%s support TLS Fallback SCSV\n\n", COL_RED, RESET);
+                                // printf_xml("  <fallback supported=\"0\" />\n");
                             }
                         }
                         else
                         {
                             if (downgraded)
                             {
+                                // SSL_get_error 第二个参数==0  与 返回0  等价
+                                // 也就是说下面所有的SSL_get_error函数全都会返回非0，全都是true
                                 if (SSL_get_error(ssl, connStatus == 1))
                                 {
                                     ERR_get_error();
                                     if (SSL_get_error(ssl, connStatus == 6))
                                     {
-                                        printf("Server %ssupports%s TLS Fallback SCSV\n\n", COL_GREEN, RESET);
-                                        printf_xml("  <fallback supported=\"1\" />\n");
+                                        // printf("Server %ssupports%s TLS Fallback SCSV\n\n", COL_GREEN, RESET);
+                                        // printf_xml("  <fallback supported=\"1\" />\n");
+                                        res->protocol_downgrade |= 0b00000001; // support scsv
                                         status = false;
                                     }
                                 }
                             }
                             else
                             {
-                                printf("%sConnection failed%s - unable to determine TLS Fallback SCSV support\n\n",
-                                        COL_YELLOW, RESET);
+                                // printf("%sConnection failed%s - unable to determine TLS Fallback SCSV support\n\n",
+                                //         COL_YELLOW, RESET);
                                 status = false;
                             }
                         }
@@ -1219,14 +931,14 @@ int testFallback(struct sslCheckOptions *options,  const SSL_METHOD *sslMethod)
                     else
                     {
                         status = false;
-                        printf_error("Could not create SSL object.");
+                        // printf_error("Could not create SSL object.");
                     }
                 }
             }
             else
             {
                 status = false;
-                printf_error("Could not set cipher.");
+                // printf_error("Could not set cipher.");
             }
             // Free CTX Object
             FREE_CTX(options->ctx);
@@ -1235,7 +947,7 @@ int testFallback(struct sslCheckOptions *options,  const SSL_METHOD *sslMethod)
         else
         {
             status = false;
-            printf_error("Could not create CTX object.");
+            // printf_error("Could not create CTX object.");
         }
 
         // Disconnect from host
@@ -1244,14 +956,14 @@ int testFallback(struct sslCheckOptions *options,  const SSL_METHOD *sslMethod)
     else
     {
         // Could not connect
-        printf_error("Could not connect.");
+        // printf_error("Could not connect.");
         exit(1);
     }
 
     // Call function again with downgraded protocol
     if (status && !downgraded)
     {
-        testFallback(options, secondMethod);
+        testFallback(options, secondMethod, res);
     }
     return status;
 }
@@ -3464,152 +3176,44 @@ int testProtocolCiphers(struct sslCheckOptions *options, const SSL_METHOD *sslMe
 }
 
 // Test a single host and port for ciphers...
-int testHost(struct sslCheckOptions *options)
+int testHost(struct sslCheckOptions *options, struct result * res)
 {
     // Variables...
     struct sslCipher *sslCipherPointer = NULL;
     int status = true;
+ 
+    // check SSL/TLS Protocols
+    if (runSSLv2Test(options)) {
+        res->tls_version |= 0b00100000;
+    }
+
+    if (runSSLv3Test(options)) {
+        res->tls_version |= 0b00010000;
+    }
+
+    if ((options->tls10_supported = checkIfTLSVersionIsSupported(options, TLSv1_0))) {
+        res->tls_version |= 0b00001000;
+    }
+
+    if ((options->tls11_supported = checkIfTLSVersionIsSupported(options, TLSv1_1))) {
+        res->tls_version |= 0b00000100;
+    }
+
+    if ((options->tls12_supported = checkIfTLSVersionIsSupported(options, TLSv1_2))) {
+        res->tls_version |= 0b00000010;
+    }
+
+    if ((options->tls13_supported = checkIfTLSVersionIsSupported(options, TLSv1_3))) {
+        res->tls_version |= 0b00000001;
+    }
     
-    // XML Output...
-    printf_xml(" <ssltest host=\"%s\" sniname=\"%s\" port=\"%d\">\n", options->host, options->sniname, options->port);
-
-    // Verbose warning about STARTTLS and SSLv3
-    if (options->sslVersion == ssl_v3 || options->sslVersion == ssl_all)
-    {
-        printf_verbose("Some servers will fail to response to SSLv3 ciphers over STARTTLS\nIf your scan hangs, try using the --tlsall option\n\n");
-    }
-
-    printf("Testing SSL server %s%s%s on port %s%d%s using SNI name %s%s%s\n\n", COL_GREEN, options->host, RESET,
-            COL_GREEN, options->port, RESET, COL_GREEN, options->sniname, RESET);
-
-    printf("  %sSSL/TLS Protocols:%s\n", COL_BLUE, RESET);
-
-    // Check if SSLv2 is enabled.
-    if ((options->sslVersion == ssl_all) || (options->sslVersion == ssl_v2)) {
-      if (runSSLv2Test(options)) {
-        printf("SSLv2     %senabled%s\n", COL_RED, RESET);
-        printf_xml("  <protocol type=\"ssl\" version=\"2\" enabled=\"1\" />\n");
-      } else {
-        printf("SSLv2     %sdisabled%s\n", COL_GREEN, RESET);
-        printf_xml("  <protocol type=\"ssl\" version=\"2\" enabled=\"0\" />\n");
-      }
-    }
-
-    // Check if SSLv3 is enabled.
-    if ((options->sslVersion == ssl_all) || (options->sslVersion == ssl_v3)) {
-      if (runSSLv3Test(options)) {
-	printf("SSLv3     %senabled%s\n", COL_RED, RESET);
-	printf_xml("  <protocol type=\"ssl\" version=\"3\" enabled=\"1\" />\n");
-      } else {
-	printf("SSLv3     %sdisabled%s\n", COL_GREEN, RESET);
-	printf_xml("  <protocol type=\"ssl\" version=\"3\" enabled=\"0\" />\n");
-      }
-    }
-
-    /* Test if TLSv1.0 through TLSv1.3 is supported.  This allows us to skip unnecessary tests later.  Print status of each protocol when verbose flag is set. */
-    if ((options->sslVersion == ssl_all) || (options->sslVersion == tls_all) || (options->sslVersion == tls_v10)) {
-      if ((options->tls10_supported = checkIfTLSVersionIsSupported(options, TLSv1_0))) {
-	printf("TLSv1.0   %senabled%s\n", COL_YELLOW, RESET);
-	printf_xml("  <protocol type=\"tls\" version=\"1.0\" enabled=\"1\" />\n");
-      } else {
-	printf("TLSv1.0   %sdisabled%s\n", COL_GREEN, RESET);
-	printf_xml("  <protocol type=\"tls\" version=\"1.0\" enabled=\"0\" />\n");
-      }
-    }
-
-    if ((options->sslVersion == ssl_all) || (options->sslVersion == tls_all) || (options->sslVersion == tls_v11)) {
-      if ((options->tls11_supported = checkIfTLSVersionIsSupported(options, TLSv1_1))) {
-	printf("TLSv1.1   %senabled%s\n", COL_YELLOW, RESET);
-	printf_xml("  <protocol type=\"tls\" version=\"1.1\" enabled=\"1\" />\n");
-      } else {
-	printf("TLSv1.1   %sdisabled%s\n", COL_GREEN, RESET);
-	printf_xml("  <protocol type=\"tls\" version=\"1.1\" enabled=\"0\" />\n");
-      }
-    }
-
-    if ((options->sslVersion == ssl_all) || (options->sslVersion == tls_all) || (options->sslVersion == tls_v12)) {
-      if ((options->tls12_supported = checkIfTLSVersionIsSupported(options, TLSv1_2))) {
-	printf("TLSv1.2   enabled\n");
-	printf_xml("  <protocol type=\"tls\" version=\"1.2\" enabled=\"1\" />\n");
-      } else {
-	printf("TLSv1.2   disabled\n");
-	printf_xml("  <protocol type=\"tls\" version=\"1.2\" enabled=\"0\" />\n");
-      }
-    }
-
-    if ((options->sslVersion == ssl_all) || (options->sslVersion == tls_all) || (options->sslVersion == tls_v13)) {
-      if ((options->tls13_supported = checkIfTLSVersionIsSupported(options, TLSv1_3))) {
-	printf("TLSv1.3   %senabled%s\n", COL_GREEN, RESET);
-	printf_xml("  <protocol type=\"tls\" version=\"1.3\" enabled=\"1\" />\n");
-      } else {
-	printf("TLSv1.3   %sdisabled%s\n", COL_YELLOW, RESET);
-	printf_xml("  <protocol type=\"tls\" version=\"1.3\" enabled=\"0\" />\n");
-      }
-    }
-    printf("\n");
-
-    if (options->showClientCiphers == true)
-    {
-        // Build a list of ciphers...
-        switch (options->sslVersion)
-        {
-            case ssl_all:
-                populateCipherList(options, TLSv1_3_client_method());
-#if OPENSSL_VERSION_NUMBER >= 0x10001000L
-                populateCipherList(options, TLSv1_2_client_method());
-                populateCipherList(options, TLSv1_1_client_method());
-#endif
-                populateCipherList(options, TLSv1_client_method());
-                break;
-            case tls_all:
-                populateCipherList(options, TLSv1_3_client_method());
-#if OPENSSL_VERSION_NUMBER >= 0x10001000L
-                populateCipherList(options, TLSv1_2_client_method());
-                populateCipherList(options, TLSv1_1_client_method());
-#endif
-                populateCipherList(options, TLSv1_client_method());
-                break;
-            case tls_v13:
-                populateCipherList(options, TLSv1_3_client_method());
-                break;
-#if OPENSSL_VERSION_NUMBER >= 0x10001000L
-            case tls_v12:
-                populateCipherList(options, TLSv1_2_client_method());
-                break;
-            case tls_v11:
-                populateCipherList(options, TLSv1_1_client_method());
-                break;
-#endif
-            case tls_v10:
-                populateCipherList(options, TLSv1_client_method());
-                break;
-        }
-        printf("\n  %sOpenSSL-Supported Client Cipher(s):%s\n", COL_BLUE, RESET);
-        sslCipherPointer = options->ciphers;
-        while ((sslCipherPointer != 0) && (status == true))
-        {
-            printf("    %s\n",sslCipherPointer->name);
-            printf_xml("  <client-cipher cipher=\"%s\" provider=\"openssl\" />\n", sslCipherPointer->name);
-
-            sslCipherPointer = sslCipherPointer->next;
-        }
-        printf("\n  %sDirectly-Supported Client Cipher(s):%s\n", COL_BLUE, RESET);
-        for (int i = 0; i < (sizeof(missing_ciphersuites) / sizeof(struct missing_ciphersuite)); i++) {
-            printf("    %s\n", missing_ciphersuites[i].protocol_name);
-            printf_xml("  <client-cipher cipher=\"%s\" provider=\"sslscan\" />\n", missing_ciphersuites[i].protocol_name);
-        }
-        printf("\n");
-    }
     if (status == true && options->fallback )
     {
-        printf("  %sTLS Fallback SCSV:%s\n", COL_BLUE, RESET);
-#ifdef SSL_MODE_SEND_FALLBACK_SCSV
-        testFallback(options, NULL);
-#else
-        printf("%sOpenSSL version does not support SCSV fallback%s\n\n", COL_RED, RESET);
-
-#endif
+        // printf("  %sTLS Fallback SCSV:%s\n", COL_BLUE, RESET);
+        testFallback(options, NULL, res);
     }
+    return 0;
+
     if (status == true && options->reneg )
     {
         printf("  %sTLS renegotiation:%s\n", COL_BLUE, RESET);
@@ -3886,10 +3490,10 @@ void test(struct result * res, int port)
             {
                 if (testConnection(options))
                 {
-                    testHost(options);
+                    testHost(options, res);
                 } 
                 else {
-                    res->connect_error = true;
+                    res->connect_error = 1;
                 }
             }
             
@@ -3936,8 +3540,8 @@ int runSSLv2Test(struct sslCheckOptions *options) {
 
   /* Send the SSLv2 Client Hello packet. */
   if (send(s, sslv2_client_hello, sizeof(sslv2_client_hello), 0) <= 0) {
-    printf_error("send() failed: %s", strerror(errno));
-    exit(1);
+    // printf_error("send() failed: %s", strerror(errno));
+    // exit(1);
   }
 
   /* Read a small amount of the response. */
@@ -4079,8 +3683,8 @@ int runSSLv3Test(struct sslCheckOptions *options) {
 
   /* Send the SSLv3 Client Hello packet. */
   if (send(s, sslv3_client_hello_1, sizeof(sslv3_client_hello_1), 0) <= 0) {
-    printf_error("send() failed: %s", strerror(errno));
-    exit(1);
+    // printf_error("send() failed: %s", strerror(errno));
+    // exit(1);
   }
 
   timestamp = htonl(time(NULL)); /* Current time stamp. */
@@ -4090,13 +3694,13 @@ int runSSLv3Test(struct sslCheckOptions *options) {
   timestamp_bytes[3] = (timestamp >> 24) & 0xff;
 
   if (send(s, timestamp_bytes, sizeof(timestamp_bytes), 0) <= 0) {
-    printf_error("send() failed: %s", strerror(errno));
-    exit(1);
+    // printf_error("send() failed: %s", strerror(errno));
+    // exit(1);
   }
 
   if (send(s, sslv3_client_hello_2, sizeof(sslv3_client_hello_2), 0) <= 0) {
-    printf_error("send() failed: %s", strerror(errno));
-    exit(1);
+    // printf_error("send() failed: %s", strerror(errno));
+    // exit(1);
   }
 
   /* Read a small amount of the response. */
@@ -4458,7 +4062,7 @@ unsigned int checkIfTLSVersionIsSupported(struct sslCheckOptions *options, unsig
 
   /* Send the Client Hello message. */
   if (send(s, bs_get_bytes(client_hello), bs_get_len(client_hello), 0) <= 0) {
-    printf_error("send() failed while sending Client Hello: %d (%s)", errno, strerror(errno));
+    // printf_error("send() failed while sending Client Hello: %d (%s)", errno, strerror(errno));
     goto done; /* Returns false. */
   }
   bs_free(&client_hello);
@@ -5484,6 +5088,15 @@ void read_csv(struct result * ret, char *path) {
     fclose(fp);
 }
 
+void print_char_to_binary(char x) {
+    char bin[9] = {0};
+    for (int i = 7; i >= 0; i--) {
+        bin[i] = '0' + (x & 1);
+        x >>= 1;
+    }
+    printf("%s, ", bin);
+}
+
 int main() {
     // char test_host[512] = "yahoo.com";
     // Build the list of ciphers missing from OpenSSL.
@@ -5494,8 +5107,17 @@ int main() {
     struct result * res = (struct result *)malloc(sizeof(struct result) * line_number_max);
     memset(res, 0, sizeof(struct result) * line_number_max);
     read_csv(res, "./test.csv");
-    for (int i = 0; res[i].index != 0 && i <= 3; i++) {
+    for (int i = 0; res[i].index != 0 && i <= 1; i++) {
         test(&res[i], port);
+        if (res[i].connect_error) {
+            printf("%d, error\n", res[i].index);
+        } 
+        else {
+            printf("%d, ", res[i].index);
+            print_char_to_binary(res[i].tls_version);
+            print_char_to_binary(res[i].protocol_downgrade);
+            printf("\n");
+        }
     }
     // test(test_host, port);
 
