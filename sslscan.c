@@ -2144,28 +2144,7 @@ int ocspRequest(struct sslCheckOptions *options, struct result * res)
     if (socketDescriptor != 0)
     {
         // Setup Context Object...
-        if( options->sslVersion == ssl_v2 || options->sslVersion == ssl_v3) {
-            // printf_verbose("sslMethod = SSLv23_method()");
-            sslMethod = SSLv23_method();
-        }
-#if OPENSSL_VERSION_NUMBER >= 0x10001000L
-        else if( options->sslVersion == tls_v11) {
-            // printf_verbose("sslMethod = TLSv1_1_method()");
-            sslMethod = TLSv1_1_method();
-        }
-        else if( options->sslVersion == tls_v12) {
-            // printf_verbose("sslMethod = TLSv1_2_method()");
-            sslMethod = TLSv1_2_method();
-        }
-#endif
-        else if( options->sslVersion == tls_v13) {
-            // printf_verbose("sslMethod = TLSv1_3_method()");
-            sslMethod = TLSv1_3_method();
-        }
-        else {
-            // printf_verbose("sslMethod = TLS_method()\n");
-            sslMethod = TLS_method();
-        }
+        sslMethod = TLS_method();
         options->ctx = new_CTX(sslMethod);
         if (options->ctx != NULL)
         {
@@ -2479,28 +2458,7 @@ int showCertificate(struct sslCheckOptions *options)
     {
 
         // Setup Context Object...
-        if( options->sslVersion == ssl_v2 || options->sslVersion == ssl_v3) {
-            printf_verbose("sslMethod = SSLv23_method()");
-            sslMethod = SSLv23_method();
-        }
-#if OPENSSL_VERSION_NUMBER >= 0x10001000L
-        else if( options->sslVersion == tls_v11) {
-            printf_verbose("sslMethod = TLSv1_1_method()");
-            sslMethod = TLSv1_1_method();
-        }
-        else if( options->sslVersion == tls_v12) {
-            printf_verbose("sslMethod = TLSv1_2_method()");
-            sslMethod = TLSv1_2_method();
-        }
-        else if( options->sslVersion == tls_v13) {
-            printf_verbose("sslMethod = TLSv1_3_method()");
-            sslMethod = TLSv1_3_method();
-        }
-#endif
-        else {
-            printf_verbose("sslMethod = TLS_method()\n");
-            sslMethod = TLS_method();
-        }
+        sslMethod = TLS_method();
         options->ctx = new_CTX(sslMethod);
         if (options->ctx != NULL)
         {
@@ -2929,28 +2887,7 @@ int showTrustedCAs(struct sslCheckOptions *options)
     {
 
         // Setup Context Object...
-        if( options->sslVersion == ssl_v2 || options->sslVersion == ssl_v3) {
-            printf_verbose("sslMethod = SSLv23_method()");
-            sslMethod = SSLv23_method();
-        }
-#if OPENSSL_VERSION_NUMBER >= 0x10001000L
-        else if( options->sslVersion == tls_v11) {
-            printf_verbose("sslMethod = TLSv1_1_method()");
-            sslMethod = TLSv1_1_method();
-        }
-        else if( options->sslVersion == tls_v12) {
-            printf_verbose("sslMethod = TLSv1_2_method()");
-            sslMethod = TLSv1_2_method();
-        }
-        else if( options->sslVersion == tls_v13) {
-            printf_verbose("sslMethod = TLSv1_3_method()");
-            sslMethod = TLSv1_3_method();
-        }
-#endif
-        else {
-            printf_verbose("sslMethod = TLS_method()\n");
-            sslMethod = TLS_method();
-        }
+        sslMethod = TLS_method();
         options->ctx = new_CTX(sslMethod);
         if (options->ctx != NULL)
         {
@@ -3257,28 +3194,20 @@ int testHost(struct sslCheckOptions *options, struct result * res)
 #if OPENSSL_VERSION_NUMBER >= 0x10001000L
         if (options->tls13_supported)
         {
-            // printf("TLSv1.3 ");
             heartbleed |= testHeartbleed(options, TLSv1_3_client_method());
         }
         if (options->tls12_supported)
         {
-            // printf("TLSv1.2 ");
             heartbleed |= testHeartbleed(options, TLSv1_2_client_method()) << 1;
         }
         if (options->tls11_supported)
         {
-            // printf("TLSv1.1 ");
             heartbleed |= testHeartbleed(options, TLSv1_1_client_method()) << 2;
         }
 #endif
         if (options->tls10_supported)
         {
-            // printf("TLSv1.0 ");
             heartbleed |= testHeartbleed(options, TLSv1_client_method()) << 3;
-        }
-        if( options->sslVersion == ssl_v2 || options->sslVersion == ssl_v3)
-        {
-            heartbleed |= 0b00010000; // cannot check
         }
         res->heartbleed = heartbleed;
     }
@@ -3291,41 +3220,19 @@ int testHost(struct sslCheckOptions *options, struct result * res)
 		status = ocspRequest(options, res);
 #endif
 	}
-    return 0;
+    
     if (options->ciphersuites)
     {
         // Test supported ciphers...
         printf("  %sSupported Server Cipher(s):%s\n", COL_BLUE, RESET);
-        switch (options->sslVersion)
-        {
-            case ssl_all:
-            case tls_all:
-                if ((status != false) && options->tls13_supported)
-                    status = testProtocolCiphers(options, TLSv1_3_client_method());
-                if ((status != false) && options->tls12_supported)
-                    status = testProtocolCiphers(options, TLSv1_2_client_method());
-                if ((status != false) && options->tls11_supported)
-                    status = testProtocolCiphers(options, TLSv1_1_client_method());
-                if ((status != false) && options->tls10_supported)
-                    status = testProtocolCiphers(options, TLSv1_client_method());
-                break;
-            case tls_v10:
-                if ((status != false) && options->tls10_supported)
-                    status = testProtocolCiphers(options, TLSv1_client_method());
-                break;
-            case tls_v11:
-                if ((status != false) && options->tls11_supported)
-                    status = testProtocolCiphers(options, TLSv1_1_client_method());
-                break;
-            case tls_v12:
-                if ((status != false) && options->tls12_supported)
-                    status = testProtocolCiphers(options, TLSv1_2_client_method());
-                break;
-            case tls_v13:
-                if ((status != false) && options->tls13_supported)
-                    status = testProtocolCiphers(options, TLSv1_3_client_method());
-                break;
-        }
+        if ((status != false) && options->tls13_supported)
+            status = testProtocolCiphers(options, TLSv1_3_client_method());
+        if ((status != false) && options->tls12_supported)
+            status = testProtocolCiphers(options, TLSv1_2_client_method());
+        if ((status != false) && options->tls11_supported)
+            status = testProtocolCiphers(options, TLSv1_1_client_method());
+        if ((status != false) && options->tls10_supported)
+            status = testProtocolCiphers(options, TLSv1_client_method());
     }
 
     // Enumerate key exchange groups.

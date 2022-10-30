@@ -215,9 +215,9 @@ struct result {
     int index;
     char host[512];
     char connect_error;
-    char tls_version; // 0 0 sslv2 sslv3 tls1.0 tls1.1 tls1.2 tls1.3
+    char tls_version; // 0 0 sslv2 sslv3 tls1.0 tls1.1 tls1.2 tls1.3 (support)
     char reneg; // 0 0 0 0 0 0 secure support
-    char heartbleed; //  0 0 0 cannot_check (vulnerable in) tls1.0 tls1.1 tls1.2 tls1.3
+    char heartbleed; //  0 0 0 0 tls1.0 tls1.1 tls1.2 tls1.3 (vulnerable in) 
     char cipher_suites; // ???
     char fs; // ???
     int exchange_key_strength;
@@ -225,7 +225,7 @@ struct result {
     char ev;
     // char certificate; // iv dv ov ev
     char protocol_downgrade; // protocol_downgrade fallback_scsv
-    char ocsp_stapling; // 0 0 0 0 0 0 ocsp_info_error support
+    char ocsp_stapling; // 0 0 0 0 0 0 ocsp_resp_error support
 
 };
 
