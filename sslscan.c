@@ -3288,7 +3288,7 @@ int testHost(struct sslCheckOptions *options, struct result * res)
 	{
 		// printf("  %sOCSP Stapling Request:%s\n", COL_BLUE, RESET);
 #if OPENSSL_VERSION_NUMBER > 0x00908000L && !defined(OPENSSL_NO_TLSEXT)
-		status = ocspRequest(options);
+		status = ocspRequest(options, res);
 #endif
 	}
     return 0;
@@ -5142,6 +5142,7 @@ int main() {
             print_char_to_binary(res[i].protocol_downgrade);
             print_char_to_binary(res[i].reneg);
             print_char_to_binary(res[i].heartbleed);
+            print_char_to_binary(res[i].ocsp_stapling);
             printf("\n");
         }
     }
