@@ -367,7 +367,7 @@ struct renegotiationOutput *newRenegotiationOutput(void);
 int freeRenegotiationOutput(struct renegotiationOutput *);
 
 int testCompression(struct sslCheckOptions *, const SSL_METHOD *);
-int testRenegotiation(struct sslCheckOptions *, const SSL_METHOD *);
+int testRenegotiation(struct sslCheckOptions *, const SSL_METHOD *, struct result*);
 #ifdef SSL_MODE_SEND_FALLBACK_SCSV
 int testfallback(struct sslCheckOptions *, const SSL_METHOD *, struct result* );
 #endif
