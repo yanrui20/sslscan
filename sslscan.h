@@ -225,6 +225,7 @@ struct result {
     char ev;
     // char certificate; // iv dv ov ev
     char protocol_downgrade; // protocol_downgrade fallback_scsv
+    char ocsp_stapling; // 0 0 0 0 0 0 ocsp_info_error support
 
 };
 
@@ -347,7 +348,7 @@ bs *makeClientHello(struct sslCheckOptions *options, unsigned int version, bs *c
 bs *makeTLSExtensions(struct sslCheckOptions *options, unsigned int include_signature_algorithms);
 void markFoundCiphersuite(unsigned short server_cipher_id, unsigned int tls_version);
 int ocsp_certid_print(BIO *bp, OCSP_CERTID *a, int indent);
-static int ocsp_resp_cb(SSL *s, void *arg);
+// static int ocsp_resp_cb(SSL *s, void *arg);
 void readLine(FILE *, char *, int);
 int readOrLogAndClose(int, void *, size_t, const struct sslCheckOptions *);
 char *resolveCipherID(unsigned short cipher_id, int *cipher_bits);

@@ -33,7 +33,6 @@
  *   version.  If you delete this exception statement from all source      *
  *   files in the program, then also delete it here.                       *
  ***************************************************************************/
-
 #define _GNU_SOURCE
 
 // Includes...
@@ -2129,15 +2128,15 @@ int checkCertificate(struct sslCheckOptions *options, const SSL_METHOD *sslMetho
 }
 
 // Request a stapled OCSP request from the server.
-int ocspRequest(struct sslCheckOptions *options)
+int ocspRequest(struct sslCheckOptions *options, struct result * res)
 {
     int cipherStatus = 0;
     int status = true;
     int socketDescriptor = 0;
     SSL *ssl = NULL;
     BIO *cipherConnectionBio = NULL;
-    BIO *stdoutBIO = NULL;
-    BIO *fileBIO = NULL;
+    // BIO *stdoutBIO = NULL;
+    // BIO *fileBIO = NULL;
     const SSL_METHOD *sslMethod = NULL;
 
     // Connect to host
@@ -2146,25 +2145,25 @@ int ocspRequest(struct sslCheckOptions *options)
     {
         // Setup Context Object...
         if( options->sslVersion == ssl_v2 || options->sslVersion == ssl_v3) {
-            printf_verbose("sslMethod = SSLv23_method()");
+            // printf_verbose("sslMethod = SSLv23_method()");
             sslMethod = SSLv23_method();
         }
 #if OPENSSL_VERSION_NUMBER >= 0x10001000L
         else if( options->sslVersion == tls_v11) {
-            printf_verbose("sslMethod = TLSv1_1_method()");
+            // printf_verbose("sslMethod = TLSv1_1_method()");
             sslMethod = TLSv1_1_method();
         }
         else if( options->sslVersion == tls_v12) {
-            printf_verbose("sslMethod = TLSv1_2_method()");
+            // printf_verbose("sslMethod = TLSv1_2_method()");
             sslMethod = TLSv1_2_method();
         }
 #endif
         else if( options->sslVersion == tls_v13) {
-            printf_verbose("sslMethod = TLSv1_3_method()");
+            // printf_verbose("sslMethod = TLSv1_3_method()");
             sslMethod = TLSv1_3_method();
         }
         else {
-            printf_verbose("sslMethod = TLS_method()\n");
+            // printf_verbose("sslMethod = TLS_method()\n");
             sslMethod = TLS_method();
         }
         options->ctx = new_CTX(sslMethod);
@@ -2204,50 +2203,43 @@ int ocspRequest(struct sslCheckOptions *options)
                         SSL_set_tlsext_host_name (ssl, options->sniname);
 #endif
 						SSL_set_tlsext_status_type(ssl, TLSEXT_STATUSTYPE_ocsp);
-						SSL_CTX_set_tlsext_status_cb(options->ctx, ocsp_resp_cb);
+						// SSL_CTX_set_tlsext_status_cb(options->ctx, ocsp_resp_cb);
                         
 						// Connect SSL over socket
                         cipherStatus = SSL_connect(ssl);
                         if (cipherStatus == 1)
                         {
-                            // Setup BIO's
-                            if (!xml_to_stdout) {
-                                stdoutBIO = BIO_new(BIO_s_file());
-                                BIO_set_fp(stdoutBIO, stdout, BIO_NOCLOSE);
-                            }
-                            if (options->xmlOutput)
-                            {
-                                fileBIO = BIO_new(BIO_s_file());
-                                BIO_set_fp(fileBIO, options->xmlOutput, BIO_NOCLOSE);
-                            }
-
-                            // Free BIO
-                            BIO_free(stdoutBIO);
-                            if (options->xmlOutput)
-                                BIO_free(fileBIO);
-
-                            // Disconnect SSL over socket
+                            // code from function: ocsp_resp_cb
+                            const unsigned char *p = NULL;
+                            int len = 0;
+                            OCSP_RESPONSE *o = NULL;
+                            len = SSL_get_tlsext_status_ocsp_resp(ssl, &p);
+                            if (p != NULL) {
+                                res->ocsp_stapling |= 0b00000001; // OCSP stamping support
+                                o = d2i_OCSP_RESPONSE(NULL, &p, len);
+                                if (o == NULL) {
+                                    res->ocsp_stapling |= 0b00000010; // OCSP response parse error 
+                                }
+                            } 
+                            // else {
+                            //     res->ocsp_stapling = 0;  // No OCSP response received. default
+                            // }
+                            if (o != NULL) { OCSP_RESPONSE_free(o); o = NULL; }
                             SSL_shutdown(ssl);
                         }
-                        else
-                        {
-                            printf("\n%sFailed to connect to get OCSP status.%s\n", COL_RED, RESET);
-                            printf("Most likely cause is server not supporting %s, try manually specifying version\n", printableSslMethod(sslMethod));
-                        }
-                        // Free SSL object
                         FREE_SSL(ssl);
                     }
                     else
                     {
                         status = false;
-                        printf_error("Could not create SSL object.");
+                        // printf_error("Could not create SSL object.");
                     }
                 }
             }
             else
             {
                 status = false;
-                printf_error("Could not set cipher.");
+                // printf_error("Could not set cipher.");
             }
 
             // Free CTX Object
@@ -2257,7 +2249,7 @@ int ocspRequest(struct sslCheckOptions *options)
         else
         {
             status = false;
-            printf_error("Could not create CTX object.");
+            // printf_error("Could not create CTX object.");
         }
 
         // Disconnect from host
@@ -2271,146 +2263,177 @@ int ocspRequest(struct sslCheckOptions *options)
     return status;
 }
 
-static int ocsp_resp_cb(SSL *s, void *unused) {
-    const unsigned char *p = NULL;
-    int len = 0;
-    OCSP_RESPONSE *o = NULL;
-    BIO *bp = BIO_new_fp(stdout, BIO_NOCLOSE);
-    int i = 0;
-    long l = 0;
-    OCSP_CERTID *cid = NULL;
-    OCSP_BASICRESP *br = NULL;
-    OCSP_RESPID *rid = NULL;
-    OCSP_RESPDATA *rd = NULL;
-    OCSP_CERTSTATUS *cst = NULL;
-    OCSP_REVOKEDINFO *rev = NULL;
-    OCSP_SINGLERESP *single = NULL;
-    OCSP_RESPBYTES *rb = NULL;
+// static int ocsp_resp_cb(SSL *s, void *unused) {
+//     const unsigned char *p = NULL;
+//     int len = 0;
+//     OCSP_RESPONSE *o = NULL;
+//     BIO *bp = BIO_new_fp(stdout, BIO_NOCLOSE);
+//     int i = 0;
+//     long l = 0;
+//     OCSP_CERTID *cid = NULL;
+//     OCSP_BASICRESP *br = NULL;
+//     OCSP_RESPID *rid = NULL;
+//     OCSP_RESPDATA *rd = NULL;
+//     OCSP_CERTSTATUS *cst = NULL;
+//     OCSP_REVOKEDINFO *rev = NULL;
+//     OCSP_SINGLERESP *single = NULL;
+//     OCSP_RESPBYTES *rb = NULL;
 
 
-    len = SSL_get_tlsext_status_ocsp_resp(s, &p);
-    if (p == NULL) {
-        BIO_puts(bp, "No OCSP response received.\n\n");
-        goto err;
-    }
+//     len = SSL_get_tlsext_status_ocsp_resp(s, &p);
+//     if (p == NULL) {
+//         BIO_puts(bp, "No OCSP response received.\n\n");
+//         goto err;
+//     }
 
-    o = d2i_OCSP_RESPONSE(NULL, &p, len);
-    if (o == NULL) {
-        BIO_puts(bp, "OCSP response parse error\n");
-        BIO_dump_indent(bp, (char *)p, len, 4);
-        goto err;
-    }
+//     o = d2i_OCSP_RESPONSE(NULL, &p, len);
+//     if (o == NULL) {
+//         BIO_puts(bp, "OCSP response parse error\n");
+//         BIO_dump_indent(bp, (char *)p, len, 4);
+//         goto err;
+//     }
 
-    rb = o->responseBytes;
-    l = ASN1_ENUMERATED_get(o->responseStatus);
-    if (BIO_printf(bp, "OCSP Response Status: %s (0x%lx)\n",
-                   OCSP_response_status_str(l), l) <= 0)
-        goto err;
-    if (rb == NULL)
-        return 1;
-    if (BIO_puts(bp, "Response Type: ") <= 0)
-        goto err;
-    if (i2a_ASN1_OBJECT(bp, rb->responseType) <= 0)
-        goto err;
-    if (OBJ_obj2nid(rb->responseType) != NID_id_pkix_OCSP_basic) {
-        BIO_puts(bp, " (unknown response type)\n");
-        return 1;
-    }
+//     rb = o->responseBytes;
+//     l = ASN1_ENUMERATED_get(o->responseStatus);
+//     if (BIO_printf(bp, "OCSP Response Status: %s (0x%lx)\n",
+//                    OCSP_response_status_str(l), l) <= 0)
+//         goto err;
+//     if (rb == NULL)
+//         return 1;
+//     if (BIO_puts(bp, "Response Type: ") <= 0)
+//         goto err;
+//     if (i2a_ASN1_OBJECT(bp, rb->responseType) <= 0)
+//         goto err;
+//     if (OBJ_obj2nid(rb->responseType) != NID_id_pkix_OCSP_basic) {
+//         BIO_puts(bp, " (unknown response type)\n");
+//         return 1;
+//     }
 
-    if ((br = OCSP_response_get1_basic(o)) == NULL)
-        goto err;
-    rd = &br->tbsResponseData;
-    l = ASN1_INTEGER_get(rd->version);
-    if (BIO_printf(bp, "\nVersion: %lu (0x%lx)\n", l + 1, l) <= 0)
-        goto err;
-    if (BIO_puts(bp, "Responder Id: ") <= 0)
-        goto err;
+//     if ((br = OCSP_response_get1_basic(o)) == NULL)
+//         goto err;
+//     rd = &br->tbsResponseData;
+//     l = ASN1_INTEGER_get(rd->version);
+//     if (BIO_printf(bp, "\nVersion: %lu (0x%lx)\n", l + 1, l) <= 0)
+//         goto err;
+//     if (BIO_puts(bp, "Responder Id: ") <= 0)
+//         goto err;
 
-    rid = &rd->responderId;
-    switch (rid->type) {
-    case V_OCSP_RESPID_NAME:
-        X509_NAME_print_ex(bp, rid->value.byName, 0, XN_FLAG_ONELINE);
-        break;
-    case V_OCSP_RESPID_KEY:
-        i2a_ASN1_STRING(bp, rid->value.byKey, 0);
-        break;
-    }
+//     rid = &rd->responderId;
+//     switch (rid->type) {
+//     case V_OCSP_RESPID_NAME:
+//         X509_NAME_print_ex(bp, rid->value.byName, 0, XN_FLAG_ONELINE);
+//         break;
+//     case V_OCSP_RESPID_KEY:
+//         i2a_ASN1_STRING(bp, rid->value.byKey, 0);
+//         break;
+//     }
 
-    if (BIO_printf(bp, "\nProduced At: ") <= 0)
-        goto err;
-    if (!ASN1_GENERALIZEDTIME_print(bp, rd->producedAt))
-        goto err;
-    if (BIO_printf(bp, "\nResponses:\n") <= 0)
-        goto err;
-    for (i = 0; i < sk_OCSP_SINGLERESP_num(rd->responses); i++) {
-        if (!sk_OCSP_SINGLERESP_value(rd->responses, i))
-            continue;
-        single = sk_OCSP_SINGLERESP_value(rd->responses, i);
-        cid = single->certId;
-        if (ocsp_certid_print(bp, cid, 4) <= 0)
-            goto err;
-        cst = single->certStatus;
-        if (BIO_puts(bp, "    Cert Status: ") <= 0)
-            goto err;
-        if (cst->type == V_OCSP_CERTSTATUS_GOOD) {
-          if (BIO_printf(bp, "%s%s%s", COL_GREEN, OCSP_cert_status_str(cst->type), RESET) <= 0)
-                goto err;
-	} else if (cst->type == V_OCSP_CERTSTATUS_REVOKED) {
-            if (BIO_printf(bp, "%s%s%s", COL_RED, OCSP_cert_status_str(cst->type), RESET) <= 0)
-                goto err;
-            rev = cst->value.revoked;
-            if (BIO_printf(bp, "\n    Revocation Time: ") <= 0)
-                goto err;
-            if (!ASN1_GENERALIZEDTIME_print(bp, rev->revocationTime))
-                goto err;
-            if (rev->revocationReason) {
-                l = ASN1_ENUMERATED_get(rev->revocationReason);
-                if (BIO_printf(bp,
-                               "\n    Revocation Reason: %s (0x%lx)",
-                               OCSP_crl_reason_str(l), l) <= 0)
-                    goto err;
-            }
-        } else {
-	  if (BIO_printf(bp, "%s%s%s", COL_YELLOW, OCSP_cert_status_str(cst->type), RESET) <= 0)
-	    goto err;
-	}
-        if (BIO_printf(bp, "\n    This Update: ") <= 0)
-            goto err;
-        if (!ASN1_GENERALIZEDTIME_print(bp, single->thisUpdate))
-            goto err;
-        if (single->nextUpdate) {
-            if (BIO_printf(bp, "\n    Next Update: ") <= 0)
-                goto err;
-            if (!ASN1_GENERALIZEDTIME_print(bp, single->nextUpdate))
-                goto err;
-        }
-        if (BIO_write(bp, "\n", 1) <= 0)
-            goto err;
+//     if (BIO_printf(bp, "\nProduced At: ") <= 0)
+//         goto err;
+//     if (!ASN1_GENERALIZEDTIME_print(bp, rd->producedAt))
+//         goto err;
+//     if (BIO_printf(bp, "\nResponses:\n") <= 0)
+//         goto err;
+//     for (i = 0; i < sk_OCSP_SINGLERESP_num(rd->responses); i++) {
+//         if (!sk_OCSP_SINGLERESP_value(rd->responses, i))
+//             continue;
+//         single = sk_OCSP_SINGLERESP_value(rd->responses, i);
+//         cid = single->certId;
+//         if (ocsp_certid_print(bp, cid, 4) <= 0)
+//             goto err;
+//         cst = single->certStatus;
+//         if (BIO_puts(bp, "    Cert Status: ") <= 0)
+//             goto err;
+//         if (cst->type == V_OCSP_CERTSTATUS_GOOD) {
+//           if (BIO_printf(bp, "%s%s%s", COL_GREEN, OCSP_cert_status_str(cst->type), RESET) <= 0)
+//                 goto err;
+// 	} else if (cst->type == V_OCSP_CERTSTATUS_REVOKED) {
+//             if (BIO_printf(bp, "%s%s%s", COL_RED, OCSP_cert_status_str(cst->type), RESET) <= 0)
+//                 goto err;
+//             rev = cst->value.revoked;
+//             if (BIO_printf(bp, "\n    Revocation Time: ") <= 0)
+//                 goto err;
+//             if (!ASN1_GENERALIZEDTIME_print(bp, rev->revocationTime))
+//                 goto err;
+//             if (rev->revocationReason) {
+//                 l = ASN1_ENUMERATED_get(rev->revocationReason);
+//                 if (BIO_printf(bp,
+//                                "\n    Revocation Reason: %s (0x%lx)",
+//                                OCSP_crl_reason_str(l), l) <= 0)
+//                     goto err;
+//             }
+//         } else {
+// 	  if (BIO_printf(bp, "%s%s%s", COL_YELLOW, OCSP_cert_status_str(cst->type), RESET) <= 0)
+// 	    goto err;
+// 	}
+//         if (BIO_printf(bp, "\n    This Update: ") <= 0)
+//             goto err;
+//         if (!ASN1_GENERALIZEDTIME_print(bp, single->thisUpdate))
+//             goto err;
+//         if (single->nextUpdate) {
+//             if (BIO_printf(bp, "\n    Next Update: ") <= 0)
+//                 goto err;
+//             if (!ASN1_GENERALIZEDTIME_print(bp, single->nextUpdate))
+//                 goto err;
+//         }
+//         if (BIO_write(bp, "\n", 1) <= 0)
+//             goto err;
 
-        if (!X509V3_extensions_print(bp,
-                                     "Response Single Extensions",
-                                     single->singleExtensions, 0, 4))
-            goto err;
-        if (BIO_write(bp, "\n", 1) <= 0)
-            goto err;
-    }
-    /*
-    if (!X509V3_extensions_print(bp, "Response Extensions",
-                                 rd->responseExtensions, 0, 4))
-        goto err;
-    if (X509_signature_print(bp, &br->signatureAlgorithm, br->signature) <= 0)
-        goto err;
+//         if (!X509V3_extensions_print(bp,
+//                                      "Response Single Extensions",
+//                                      single->singleExtensions, 0, 4))
+//             goto err;
+//         if (BIO_write(bp, "\n", 1) <= 0)
+//             goto err;
+//     }
+//     /*
+//     if (!X509V3_extensions_print(bp, "Response Extensions",
+//                                  rd->responseExtensions, 0, 4))
+//         goto err;
+//     if (X509_signature_print(bp, &br->signatureAlgorithm, br->signature) <= 0)
+//         goto err;
 
-    for (i = 0; i < sk_X509_num(br->certs); i++) {
-        X509_print(bp, sk_X509_value(br->certs, i));
-        PEM_write_bio_X509(bp, sk_X509_value(br->certs, i));
-    }
-    */
- err:
-  if (o != NULL) { OCSP_RESPONSE_free(o); o = NULL; }
-  BIO_free(bp);
-  return 1;
-}
+//     for (i = 0; i < sk_X509_num(br->certs); i++) {
+//         X509_print(bp, sk_X509_value(br->certs, i));
+//         PEM_write_bio_X509(bp, sk_X509_value(br->certs, i));
+//     }
+//     */
+// err:
+//     if (o != NULL) { OCSP_RESPONSE_free(o); o = NULL; }
+//     BIO_free(bp);
+//     return 1;
+// }
+
+// static int ocsp_resp_cb(SSL *s, void *unused) {
+//     const unsigned char *p = NULL;
+//     int len = 0;
+//     OCSP_RESPONSE *o = NULL;
+//     int res_number = 1; // ocsp stamping ok
+
+//     len = SSL_get_tlsext_status_ocsp_resp(s, &p);
+//     if (p == NULL) {
+//         res_number = 0; // No OCSP response received. len <= 0
+//         goto err;
+//     }
+
+//     o = d2i_OCSP_RESPONSE(NULL, &p, len); // data to info ?
+//     if (o == NULL) {
+//         res_number = 2; // OCSP response parse error 
+//     }
+    
+//  err:
+//     if (o != NULL) { OCSP_RESPONSE_free(o); o = NULL; }
+//     // printf("res_number: %d\n", res_number);
+//     // printf("status_expected: %d\n", s->ext.status_expected);
+//     // printf("ocsp:\n");
+//     // printf("ids:%d\n", s->ext.ocsp.ids);
+//     // printf("resp:%d\n", s->ext.ocsp.resp);
+//     // printf("resp_len:%d\n", s->ext.ocsp.resp_len);
+//     // printf("len:%d\n", len);
+
+
+//     return 1;
+// }
 
 int ocsp_certid_print(BIO *bp, OCSP_CERTID *a, int indent)
 {
@@ -3258,18 +3281,17 @@ int testHost(struct sslCheckOptions *options, struct result * res)
             heartbleed |= 0b00010000; // cannot check
         }
         res->heartbleed = heartbleed;
-
     }
-    return 0;
+    
 	// Print OCSP response
 	if (status == true && options->ocspStatus == true)
 	{
-		printf("  %sOCSP Stapling Request:%s\n", COL_BLUE, RESET);
+		// printf("  %sOCSP Stapling Request:%s\n", COL_BLUE, RESET);
 #if OPENSSL_VERSION_NUMBER > 0x00908000L && !defined(OPENSSL_NO_TLSEXT)
 		status = ocspRequest(options);
 #endif
 	}
-
+    return 0;
     if (options->ciphersuites)
     {
         // Test supported ciphers...
@@ -3317,7 +3339,7 @@ int testHost(struct sslCheckOptions *options, struct result * res)
     // Certificate checks
     if (status == true && (options->showCertificate == true || options->checkCertificate == true))
     {
-        printf_xml(" <certificates>\n");
+        // printf_xml(" <certificates>\n");
         // Full certificate details (--show-certificates)
         if (status == true && options->showCertificate == true)
         {
@@ -3338,7 +3360,7 @@ int testHost(struct sslCheckOptions *options, struct result * res)
             if (status != false)
                 printf("Certificate information cannot be retrieved.\n\n");
         }
-        printf_xml(" </certificates>\n");
+        // printf_xml(" </certificates>\n");
     }
 
     // Print client auth trusted CAs
@@ -3348,7 +3370,7 @@ int testHost(struct sslCheckOptions *options, struct result * res)
     }
 
     // XML Output...
-    printf_xml(" </ssltest>\n");
+    // printf_xml(" </ssltest>\n");
 
     // Return status...
     return status;
@@ -3395,7 +3417,7 @@ void test(struct result * res, int port)
     sslOptions.cipher_details = true;
     sslOptions.ipv4 = true;
     sslOptions.ipv6 = true;
-    sslOptions.ocspStatus = false;
+    sslOptions.ocspStatus = true;
 
     // Default socket timeout 3s
     sslOptions.timeout.tv_sec = 1;
@@ -5109,7 +5131,7 @@ int main() {
     struct result * res = (struct result *)malloc(sizeof(struct result) * line_number_max);
     memset(res, 0, sizeof(struct result) * line_number_max);
     read_csv(res, "./test.csv");
-    for (int i = 0; res[i].index != 0 && i <= 1; i++) {
+    for (int i = 0; res[i].index != 0 && i <= 10; i++) {
         test(&res[i], port);
         if (res[i].connect_error) {
             printf("%d, error\n", res[i].index);
