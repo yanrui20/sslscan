@@ -1144,7 +1144,7 @@ int testRenegotiation(struct sslCheckOptions *options, const SSL_METHOD *sslMeth
         // printf_error("Could not connect.");
         renOut->supported = false;
         freeRenegotiationOutput( renOut );
-        // exit(1);
+        exit(1);
     }
     // outputRenegotiation(options, renOut);
     resu->reneg = (renOut->supported | renOut->secure << 1);
@@ -1173,7 +1173,7 @@ const char* printableSslMethod(const SSL_METHOD *sslMethod)
 int testHeartbleed(struct sslCheckOptions *options, const SSL_METHOD *sslMethod)
 {
     // Variables...
-    int status = true;
+    // int status = true;
     int socketDescriptor = 0;
 
     // Connect to host
@@ -1274,14 +1274,15 @@ int testHeartbleed(struct sslCheckOptions *options, const SSL_METHOD *sslMethod)
             // Successful response
             else if (typ == 24 && ln > 3)
             {
-                printf("%svulnerable%s to heartbleed\n", COL_RED, RESET);
-                printf_xml("  <heartbleed sslversion=\"%s\" vulnerable=\"1\" />\n", printableSslMethod(sslMethod));
+                // printf("%svulnerable%s to heartbleed\n", COL_RED, RESET);
+                // printf_xml("  <heartbleed sslversion=\"%s\" vulnerable=\"1\" />\n", printableSslMethod(sslMethod));
                 close(socketDescriptor);
-                return status;
+                // return status;
+                return true;
             }
         }
-        printf("%snot vulnerable%s to heartbleed\n", COL_GREEN, RESET);
-        printf_xml("  <heartbleed sslversion=\"%s\" vulnerable=\"0\" />\n", printableSslMethod(sslMethod));
+        // printf("%snot vulnerable%s to heartbleed\n", COL_GREEN, RESET);
+        // printf_xml("  <heartbleed sslversion=\"%s\" vulnerable=\"0\" />\n", printableSslMethod(sslMethod));
 
         // Disconnect from host
         close(socketDescriptor);
@@ -1289,12 +1290,13 @@ int testHeartbleed(struct sslCheckOptions *options, const SSL_METHOD *sslMethod)
     else
     {
         // Could not connect
-        printf_error("Could not connect.");
-        printf("dying");
+        // printf_error("Could not connect.");
+        // printf("dying");
         exit(1);
     }
 
-    return status;
+    // return status;
+    return false;
 }
 
 
@@ -3227,36 +3229,38 @@ int testHost(struct sslCheckOptions *options, struct result * res)
 
     if (status == true && options->heartbleed )
     {
-        printf("  %sHeartbleed:%s\n", COL_BLUE, RESET);
+        // printf("  %sHeartbleed:%s\n", COL_BLUE, RESET);
+        char heartbleed = 0;
 #if OPENSSL_VERSION_NUMBER >= 0x10001000L
-        if ((options->sslVersion == ssl_all || options->sslVersion == tls_all || options->sslVersion == tls_v13) && options->tls13_supported)
+        if (options->tls13_supported)
         {
-            printf("TLSv1.3 ");
-            status = testHeartbleed(options, TLSv1_3_client_method());
+            // printf("TLSv1.3 ");
+            heartbleed |= testHeartbleed(options, TLSv1_3_client_method());
         }
-        if ((options->sslVersion == ssl_all || options->sslVersion == tls_all || options->sslVersion == tls_v12) && options->tls12_supported)
+        if (options->tls12_supported)
         {
-            printf("TLSv1.2 ");
-            status = testHeartbleed(options, TLSv1_2_client_method());
+            // printf("TLSv1.2 ");
+            heartbleed |= testHeartbleed(options, TLSv1_2_client_method()) << 1;
         }
-        if ((options->sslVersion == ssl_all || options->sslVersion == tls_all || options->sslVersion == tls_v11) && options->tls11_supported)
+        if (options->tls11_supported)
         {
-            printf("TLSv1.1 ");
-            status = testHeartbleed(options, TLSv1_1_client_method());
+            // printf("TLSv1.1 ");
+            heartbleed |= testHeartbleed(options, TLSv1_1_client_method()) << 2;
         }
 #endif
-        if ((options->sslVersion == ssl_all || options->sslVersion == tls_all || options->sslVersion == tls_v10) && options->tls10_supported)
+        if (options->tls10_supported)
         {
-            printf("TLSv1.0 ");
-            status = testHeartbleed(options, TLSv1_client_method());
+            // printf("TLSv1.0 ");
+            heartbleed |= testHeartbleed(options, TLSv1_client_method()) << 3;
         }
         if( options->sslVersion == ssl_v2 || options->sslVersion == ssl_v3)
         {
-            printf("%sAll TLS protocols disabled, cannot check for heartbleed.\n%s", COL_RED, RESET);
+            heartbleed |= 0b00010000; // cannot check
         }
-            printf("\n");
-    }
+        res->heartbleed = heartbleed;
 
+    }
+    return 0;
 	// Print OCSP response
 	if (status == true && options->ocspStatus == true)
 	{
@@ -3539,8 +3543,8 @@ int runSSLv2Test(struct sslCheckOptions *options) {
 
   /* Send the SSLv2 Client Hello packet. */
   if (send(s, sslv2_client_hello, sizeof(sslv2_client_hello), 0) <= 0) {
-    // printf_error("send() failed: %s", strerror(errno));
-    // exit(1);
+    printf_error("send() failed: %s", strerror(errno));
+    exit(1);
   }
 
   /* Read a small amount of the response. */
@@ -3682,8 +3686,8 @@ int runSSLv3Test(struct sslCheckOptions *options) {
 
   /* Send the SSLv3 Client Hello packet. */
   if (send(s, sslv3_client_hello_1, sizeof(sslv3_client_hello_1), 0) <= 0) {
-    // printf_error("send() failed: %s", strerror(errno));
-    // exit(1);
+    printf_error("send() failed: %s", strerror(errno));
+    exit(1);
   }
 
   timestamp = htonl(time(NULL)); /* Current time stamp. */
@@ -3693,13 +3697,13 @@ int runSSLv3Test(struct sslCheckOptions *options) {
   timestamp_bytes[3] = (timestamp >> 24) & 0xff;
 
   if (send(s, timestamp_bytes, sizeof(timestamp_bytes), 0) <= 0) {
-    // printf_error("send() failed: %s", strerror(errno));
-    // exit(1);
+    printf_error("send() failed: %s", strerror(errno));
+    exit(1);
   }
 
   if (send(s, sslv3_client_hello_2, sizeof(sslv3_client_hello_2), 0) <= 0) {
-    // printf_error("send() failed: %s", strerror(errno));
-    // exit(1);
+    printf_error("send() failed: %s", strerror(errno));
+    exit(1);
   }
 
   /* Read a small amount of the response. */
@@ -5115,6 +5119,7 @@ int main() {
             print_char_to_binary(res[i].tls_version);
             print_char_to_binary(res[i].protocol_downgrade);
             print_char_to_binary(res[i].reneg);
+            print_char_to_binary(res[i].heartbleed);
             printf("\n");
         }
     }
