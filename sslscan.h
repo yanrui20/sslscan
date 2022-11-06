@@ -215,16 +215,17 @@ struct result {
     int index;
     char host[512];
     char connect_error;
-    char tls_version; // 0 0 sslv2 sslv3 tls1.0 tls1.1 tls1.2 tls1.3 (support)
-    char reneg; // 0 0 0 0 0 0 secure support
-    char heartbleed; //  0 0 0 0 tls1.0 tls1.1 tls1.2 tls1.3 (vulnerable in) 
+    char tls_version; // test 0 sslv2 sslv3 tls1.0 tls1.1 tls1.2 tls1.3 (support)
+    char reneg; // test 0 0 0 0 0 secure support
+    char heartbleed; //  test 0 0 0 tls1.0 tls1.1 tls1.2 tls1.3 (vulnerable in) 
     // char cipher_suites; // ???
-    int certificate_key_strength;
-    char ev;
+    char certificate_key_category; // test 0 0 0 ECC DSA RSA ERROR
+    int certificate_keyBits;
+    char certificate_issuer; // test 0 0 0 have_no_cn dv ov ev
     // char certificate; // iv dv ov ev
-    char protocol_downgrade; // protocol_downgrade fallback_scsv
-    char ocsp_stapling; // 0 0 0 0 0 0 ocsp_resp_error support
-    char fs; // 0 0 0 0 0 0 DHE ECDHE
+    char protocol_downgrade; // test 0 0 0 0 0 protocol_downgrade fallback_scsv
+    char ocsp_stapling; // test 0 0 0 0 0 ocsp_resp_error support
+    char fs; // test 0 0 0 0 0 DHE ECDHE
     int fs_cipherbits;
 
 };
@@ -381,8 +382,8 @@ int testProtocolCiphers(struct sslCheckOptions *, const SSL_METHOD *, struct res
 int testConnection(struct sslCheckOptions *);
 int testHost(struct sslCheckOptions *, struct result *);
 int loadCerts(struct sslCheckOptions *);
-int checkCertificateProtocols(struct sslCheckOptions *, const SSL_METHOD *);
-int checkCertificate(struct sslCheckOptions *, const SSL_METHOD *);
+int checkCertificateProtocol(struct sslCheckOptions *, const SSL_METHOD *, struct result *);
+int checkCertificate(struct sslCheckOptions *, const SSL_METHOD *, struct result *);
 int showCertificate(struct sslCheckOptions *);
 
 int runSSLv2Test(struct sslCheckOptions *options);

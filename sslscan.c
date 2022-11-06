@@ -1656,7 +1656,7 @@ int testCipher(struct sslCheckOptions *options, const SSL_METHOD *sslMethod, str
     return status;
 }
 
-int checkCertificateProtocol(struct sslCheckOptions *options, const SSL_METHOD *sslMethod)
+int checkCertificateProtocol(struct sslCheckOptions *options, const SSL_METHOD *sslMethod, struct result * res)
 {
     int status = true;
     // Setup Context Object...
@@ -1669,12 +1669,12 @@ int checkCertificateProtocol(struct sslCheckOptions *options, const SSL_METHOD *
         else
             SSL_CTX_set_options(options->ctx, 0);
 
-        // Load Certs if required...
-        if ((options->clientCertsFile != 0) || (options->privateKeyFile != 0))
-            status = loadCerts(options);
+        // // Load Certs if required...
+        // if ((options->clientCertsFile != 0) || (options->privateKeyFile != 0))
+        //     status = loadCerts(options);
 
         // Check the certificate
-        status = checkCertificate(options, sslMethod);
+        status = checkCertificate(options, sslMethod, res);
     }
 
     // Error Creating Context Object
@@ -1687,7 +1687,7 @@ int checkCertificateProtocol(struct sslCheckOptions *options, const SSL_METHOD *
 }
 
 // Report certificate weaknesses (key length and signing algorithm)
-int checkCertificate(struct sslCheckOptions *options, const SSL_METHOD *sslMethod)
+int checkCertificate(struct sslCheckOptions *options, const SSL_METHOD *sslMethod, struct result * res)
 {
     int status = true;
     int socketDescriptor = 0;
@@ -1715,8 +1715,8 @@ int checkCertificate(struct sslCheckOptions *options, const SSL_METHOD *sslMetho
             if (SSL_CTX_set_cipher_list(options->ctx, CIPHERSUITE_LIST_ALL) != 0)
             {
                 // Load Certs if required...
-                if ((options->clientCertsFile != 0) || (options->privateKeyFile != 0))
-                    status = loadCerts(options);
+                // if ((options->clientCertsFile != 0) || (options->privateKeyFile != 0))
+                //     status = loadCerts(options);
 
                 if (status == true)
                 {
@@ -1762,8 +1762,8 @@ int checkCertificate(struct sslCheckOptions *options, const SSL_METHOD *sslMetho
                         x509Cert = SSL_get_peer_certificate(ssl);
                         if (x509Cert != NULL)
                         {
-                            printf("\n  %sSSL Certificate:%s\n", COL_BLUE, RESET);
-                            printf_xml("  <certificate type=\"short\">\n");
+                            // printf("\n  %sSSL Certificate:%s\n", COL_BLUE, RESET);
+                            // printf_xml("  <certificate type=\"short\">\n");
                             // Cert Serial No. - Code adapted from OpenSSL's crypto/asn1/t_x509.c
                             if (!(X509_FLAG_COMPAT & X509_FLAG_NO_SERIAL))
                             {
@@ -1776,32 +1776,32 @@ int checkCertificate(struct sslCheckOptions *options, const SSL_METHOD *sslMetho
                                 // We don't free the xml_bp because it will be used in the future
                             }
 
-                            // Signature Algo...
-                            if (!(X509_FLAG_COMPAT & X509_FLAG_NO_SIGNAME))
-                            {
-                                printf("Signature Algorithm: ");
-                                X509_get0_signature(NULL, &palg, x509Cert);
-                                X509_ALGOR_get0(&paobj, NULL, NULL, palg);
-                                OBJ_obj2txt(certAlgorithm, sizeof(certAlgorithm), paobj, 0);
-                                strtok(certAlgorithm, "\n");
-                                if (strstr(certAlgorithm, "md5") || strstr(certAlgorithm, "sha1"))
-                                {
-                                    printf("%s%s%s\n", COL_RED, certAlgorithm, RESET);
-                                }
-                                else if (strstr(certAlgorithm, "sha512") || strstr(certAlgorithm, "sha256"))
-                                {
-                                    printf("%s%s%s\n", COL_GREEN, certAlgorithm, RESET);
-                                }
-                                else
-                                {
-                                    printf("%s\n", certAlgorithm);
-                                }
+                            // // Signature Algo...
+                            // if (!(X509_FLAG_COMPAT & X509_FLAG_NO_SIGNAME))
+                            // {
+                            //     printf("Signature Algorithm: ");
+                            //     X509_get0_signature(NULL, &palg, x509Cert);
+                            //     X509_ALGOR_get0(&paobj, NULL, NULL, palg);
+                            //     OBJ_obj2txt(certAlgorithm, sizeof(certAlgorithm), paobj, 0);
+                            //     strtok(certAlgorithm, "\n");
+                            //     if (strstr(certAlgorithm, "md5") || strstr(certAlgorithm, "sha1"))
+                            //     {
+                            //         printf("%s%s%s\n", COL_RED, certAlgorithm, RESET);
+                            //     }
+                            //     else if (strstr(certAlgorithm, "sha512") || strstr(certAlgorithm, "sha256"))
+                            //     {
+                            //         printf("%s%s%s\n", COL_GREEN, certAlgorithm, RESET);
+                            //     }
+                            //     else
+                            //     {
+                            //         printf("%s\n", certAlgorithm);
+                            //     }
 
-                                if (options->xmlOutput)
-                                {
-                                    printf_xml("   <signature-algorithm>%s</signature-algorithm>\n", certAlgorithm);
-                                }
-                            }
+                            //     if (options->xmlOutput)
+                            //     {
+                            //         printf_xml("   <signature-algorithm>%s</signature-algorithm>\n", certAlgorithm);
+                            //     }
+                            // }
 
                             // Public Key...
                             if (!(X509_FLAG_COMPAT & X509_FLAG_NO_PUBKEY))
@@ -1809,8 +1809,9 @@ int checkCertificate(struct sslCheckOptions *options, const SSL_METHOD *sslMetho
                                 publicKey = X509_get_pubkey(x509Cert);
                                 if (publicKey == NULL)
                                 {
-                                    printf("Public Key: Could not load\n");
-                                    printf_xml("   <pk error=\"true\" />\n");
+                                    // printf("Public Key: Could not load\n");
+                                    // printf_xml("   <pk error=\"true\" />\n");
+									res->certificate_key_category |= 0b00000001; // error
                                 }
                                 else
                                 {
@@ -1818,70 +1819,77 @@ int checkCertificate(struct sslCheckOptions *options, const SSL_METHOD *sslMetho
                                     switch (EVP_PKEY_id(publicKey))
                                     {
                                         case EVP_PKEY_RSA:
-                                            if (EVP_PKEY_get1_RSA(publicKey)!=NULL)
-                                            {
-                                                if (keyBits < 2048 )
-                                                {
-                                                    printf("RSA Key Strength:    %s%d%s\n", COL_RED, keyBits, RESET);
-                                                }
-                                                else if (keyBits >= 3072 )
-                                                {
-                                                    printf("RSA Key Strength:    %s%d%s\n", COL_GREEN, keyBits, RESET);
-                                                }
-                                                else
-                                                {
-                                                    printf("RSA Key Strength:    %d\n", keyBits);
-                                                }
+											res->certificate_key_category |= 0b00000010; // RSA
+											res->certificate_keyBits = keyBits;
+                                            // if (EVP_PKEY_get1_RSA(publicKey)!=NULL)
+                                            // {
+                                            //     if (keyBits < 2048 )
+                                            //     {
+                                            //         printf("RSA Key Strength:    %s%d%s\n", COL_RED, keyBits, RESET);
+                                            //     }
+                                            //     else if (keyBits >= 3072 )
+                                            //     {
+                                            //         printf("RSA Key Strength:    %s%d%s\n", COL_GREEN, keyBits, RESET);
+                                            //     }
+                                            //     else
+                                            //     {
+                                            //         printf("RSA Key Strength:    %d\n", keyBits);
+                                            //     }
 
-                                                printf_xml("   <pk error=\"false\" type=\"RSA\" bits=\"%d\" />\n", keyBits);
-                                            }
-                                            else
-                                            {
-                                                printf("    RSA Public Key: NULL\n");
-                                            }
-                                            printf("\n");
+                                            //     printf_xml("   <pk error=\"false\" type=\"RSA\" bits=\"%d\" />\n", keyBits);
+                                            // }
+                                            // else
+                                            // {
+                                            //     printf("    RSA Public Key: NULL\n");
+                                            // }
+                                            // printf("\n");
                                             break;
                                         case EVP_PKEY_DSA:
-                                            if (EVP_PKEY_get1_DSA(publicKey)!=NULL)
-                                            {
-                                                // TODO - display key strength
-                                                printf_xml("   <pk error=\"false\" type=\"DSA\" />\n");
-                                                /* DSA_print(stdoutBIO, publicKey->pkey.dsa, 6); */
-                                            }
-                                            else
-                                            {
-                                                printf("    DSA Public Key: NULL\n");
-                                            }
+                                            // if (EVP_PKEY_get1_DSA(publicKey)!=NULL)
+                                            // {
+                                            //     // TODO - display key strength
+                                            //     printf_xml("   <pk error=\"false\" type=\"DSA\" />\n");
+                                            //     /* DSA_print(stdoutBIO, publicKey->pkey.dsa, 6); */
+                                            // }
+                                            // else
+                                            // {
+                                            //     printf("    DSA Public Key: NULL\n");
+                                            // }
+											res->certificate_key_category |= 0b00000100; // DSA
+											res->certificate_keyBits = keyBits;
                                             break;
                                         case EVP_PKEY_EC:
                                             {
+												res->certificate_key_category |= 0b00001000; // ECC
                                                 EC_KEY *ec_key = EVP_PKEY_get1_EC_KEY(publicKey);
                                                 if (ec_key != NULL)
                                                 {
                                                     // We divide by two to get the symmetric key strength equivalent; this
                                                     // ensures consistency with the Server Key Exchange Group section.
                                                     int keyBits = EVP_PKEY_bits(publicKey) / 2;
-                                                    const char *ec_group_name = OBJ_nid2sn(EC_GROUP_get_curve_name(EC_KEY_get0_group(ec_key)));
-                                                    char *color = "";
+													res->certificate_keyBits = keyBits / 2;
+                                                    // const char *ec_group_name = OBJ_nid2sn(EC_GROUP_get_curve_name(EC_KEY_get0_group(ec_key)));
+                                                    // char *color = "";
 
 
-                                                    if (keyBits < 112)
-                                                        color = COL_RED;
-                                                    else if (keyBits < 128)
-                                                        color = COL_YELLOW;
+                                                    // if (keyBits < 112)
+                                                    //     color = COL_RED;
+                                                    // else if (keyBits < 128)
+                                                    //     color = COL_YELLOW;
 
-                                                    printf("ECC Curve Name:      %s\n", ec_group_name);
-                                                    printf("ECC Key Strength:    %s%d%s\n\n", color, keyBits, RESET);
-                                                    printf_xml("   <pk error=\"false\" type=\"EC\" curve_name=\"%s\" bits=\"%d\" />\n", ec_group_name, keyBits);
+                                                    // printf("ECC Curve Name:      %s\n", ec_group_name);
+                                                    // printf("ECC Key Strength:    %s%d%s\n\n", color, keyBits, RESET);
+                                                    // printf_xml("   <pk error=\"false\" type=\"EC\" curve_name=\"%s\" bits=\"%d\" />\n", ec_group_name, keyBits);
                                                     EC_KEY_free(ec_key); ec_key = NULL;
                                                 }
-                                                else
-                                                    printf("    EC Public Key: NULL\n");
+                                                // else
+                                                //     printf("    EC Public Key: NULL\n");
                                             }
                                             break;
                                         default:
-                                            printf("    Public Key: Unknown\n");
-                                            printf_xml("   <pk error=\"true\" type=\"unknown\" />\n");
+                                            // printf("    Public Key: Unknown\n");
+                                            // printf_xml("   <pk error=\"true\" type=\"unknown\" />\n");
+											res->certificate_key_category |= 0b00000001; // error
                                             break;
                                     }
 
@@ -1904,49 +1912,49 @@ int checkCertificate(struct sslCheckOptions *options, const SSL_METHOD *sslMetho
                                 subj = X509_get_subject_name(x509Cert);
                                 cnindex = X509_NAME_get_index_by_NID(subj, NID_commonName, cnindex);
 
-                                // SSL cert doesn't have a CN, so just print whole thing
-                                if (cnindex == -1)
-                                {
-                                    subject = (char *) X509_NAME_oneline(X509_get_subject_name(x509Cert), NULL, 0);
-                                    printf("Subject:  %s\n", subject);
-                                    printf_xml("   <subject><![CDATA[%s]]></subject>\n", subject);
+                                // // SSL cert doesn't have a CN, so just print whole thing
+                                // if (cnindex == -1)
+                                // {
+                                //     subject = (char *) X509_NAME_oneline(X509_get_subject_name(x509Cert), NULL, 0);
+                                //     printf("Subject:  %s\n", subject);
+                                //     printf_xml("   <subject><![CDATA[%s]]></subject>\n", subject);
 
-                                }
-                                else
-                                {
-                                    e = X509_NAME_get_entry(subj, cnindex);
-                                    d = X509_NAME_ENTRY_get_data(e);
-                                    subject = (char *) ASN1_STRING_data(d);
-                                    printf("Subject:  %s\n", subject);
-                                    printf_xml("   <subject><![CDATA[%s]]></subject>\n", subject);
-                                }
+                                // }
+                                // else
+                                // {
+                                //     e = X509_NAME_get_entry(subj, cnindex);
+                                //     d = X509_NAME_ENTRY_get_data(e);
+                                //     subject = (char *) ASN1_STRING_data(d);
+                                //     printf("Subject:  %s\n", subject);
+                                //     printf_xml("   <subject><![CDATA[%s]]></subject>\n", subject);
+                                // }
 
-                                // Get certificate altnames if supported
-                                if (!(X509_FLAG_COMPAT & X509_FLAG_NO_EXTENSIONS))
-                                {
-                                    if (sk_X509_EXTENSION_num(X509_get0_extensions(x509Cert)) > 0)
-                                    {
-                                        cnindex = X509_get_ext_by_NID (x509Cert, NID_subject_alt_name, -1);
-                                        if (cnindex != -1)
-                                        {
-                                            extension = X509v3_get_ext(X509_get0_extensions(x509Cert),cnindex);
+                                // // Get certificate altnames if supported
+                                // if (!(X509_FLAG_COMPAT & X509_FLAG_NO_EXTENSIONS))
+                                // {
+                                //     if (sk_X509_EXTENSION_num(X509_get0_extensions(x509Cert)) > 0)
+                                //     {
+                                //         cnindex = X509_get_ext_by_NID (x509Cert, NID_subject_alt_name, -1);
+                                //         if (cnindex != -1)
+                                //         {
+                                //             extension = X509v3_get_ext(X509_get0_extensions(x509Cert),cnindex);
 
-                                            printf("Altnames: ");
-                                            if (!X509V3_EXT_print(stdoutBIO, extension, X509_FLAG_COMPAT, 0))
-                                            {
-                                                ASN1_STRING_print(stdoutBIO, X509_EXTENSION_get_data(extension));
-                                            }
-                                            if (options->xmlOutput)
-                                            {
-                                                printf_xml("   <altnames><![CDATA[");
-                                                if (!X509V3_EXT_print(fileBIO, extension, X509_FLAG_COMPAT, 0))
-                                                    ASN1_STRING_print(fileBIO, X509_EXTENSION_get_data(extension));
-                                            }
-                                            printf_xml("]]></altnames>\n");
-                                            printf("\n");
-                                        }
-                                    }
-                                }
+                                //             printf("Altnames: ");
+                                //             if (!X509V3_EXT_print(stdoutBIO, extension, X509_FLAG_COMPAT, 0))
+                                //             {
+                                //                 ASN1_STRING_print(stdoutBIO, X509_EXTENSION_get_data(extension));
+                                //             }
+                                //             if (options->xmlOutput)
+                                //             {
+                                //                 printf_xml("   <altnames><![CDATA[");
+                                //                 if (!X509V3_EXT_print(fileBIO, extension, X509_FLAG_COMPAT, 0))
+                                //                     ASN1_STRING_print(fileBIO, X509_EXTENSION_get_data(extension));
+                                //             }
+                                //             printf_xml("]]></altnames>\n");
+                                //             printf("\n");
+                                //         }
+                                //     }
+                                // }
 
                                 // Get SSL cert issuer
                                 cnindex = -1;
@@ -1956,122 +1964,130 @@ int checkCertificate(struct sslCheckOptions *options, const SSL_METHOD *sslMetho
                                 // Issuer cert doesn't have a CN, so just print whole thing
                                 if (cnindex == -1)
                                 {
-                                    char *issuer = X509_NAME_oneline(X509_get_issuer_name(x509Cert), NULL, 0);
-                                    char *color = "";
-                                    int self_signed = 0;
+									res->certificate_issuer |= 0b00001000;
+                                    // char *issuer = X509_NAME_oneline(X509_get_issuer_name(x509Cert), NULL, 0);
+                                    // char *color = "";
+                                    // int self_signed = 0;
 
-                                    if ((subject != NULL) && (strcmp(subject, issuer) == 0)) {
-                                        color = COL_RED;
-                                        self_signed = 1;
-                                    }
-                                    printf("%sIssuer:   %s%s", color, issuer, RESET);
-                                    printf_xml("   <issuer><![CDATA[%s]]></issuer>\n", issuer);
+                                    // if ((subject != NULL) && (strcmp(subject, issuer) == 0)) {
+                                    //     color = COL_RED;
+                                    //     self_signed = 1;
+                                    // }
+                                    // printf("%sIssuer:   %s%s", color, issuer, RESET);
+                                    // printf_xml("   <issuer><![CDATA[%s]]></issuer>\n", issuer);
 
-                                    if (self_signed) {
-                                        printf_xml("   <self-signed>true</self-signed>\n");
-                                    }
-                                    else {
-                                        printf_xml("   <self-signed>false</self-signed>\n");
-                                    }
+                                    // if (self_signed) {
+                                    //     printf_xml("   <self-signed>true</self-signed>\n");
+                                    // }
+                                    // else {
+                                    //     printf_xml("   <self-signed>false</self-signed>\n");
+                                    // }
                                 }
                                 else
                                 {
                                     e = X509_NAME_get_entry(subj, cnindex);
                                     d = X509_NAME_ENTRY_get_data(e);
                                     issuer = (char *) ASN1_STRING_data(d);
+									// printf("%s\n", issuer);
+									if (strstr(issuer, "EV")) {
+										res->certificate_issuer |= 0b00000001; // EV
+									} else if (strstr(issuer, "OV")) {
+										res->certificate_issuer |= 0b00000010; // OV
+									} else if (strstr(issuer, "DV")) {
+										res->certificate_issuer |= 0b00000100; // DV
+									}
+                                    // // If issuer is same as hostname we scanned or is *, flag as self-signed
+                                    // if (
+                                    //         strcmp(issuer, options->host) == 0
+                                    //         || strcmp(issuer, subject) == 0
+                                    //         || strcmp(issuer, "*") == 0
+                                    //    )
+                                    // {
+                                    //     printf("Issuer:   %s%s%s\n", COL_RED, issuer, RESET);
+                                    //     printf_xml("   <issuer><![CDATA[%s]]></issuer>\n", issuer);
+                                    //     printf_xml("   <self-signed>true</self-signed>\n");
 
-                                    // If issuer is same as hostname we scanned or is *, flag as self-signed
-                                    if (
-                                            strcmp(issuer, options->host) == 0
-                                            || strcmp(issuer, subject) == 0
-                                            || strcmp(issuer, "*") == 0
-                                       )
-                                    {
-                                        printf("Issuer:   %s%s%s\n", COL_RED, issuer, RESET);
-                                        printf_xml("   <issuer><![CDATA[%s]]></issuer>\n", issuer);
-                                        printf_xml("   <self-signed>true</self-signed>\n");
-
-                                    }
-                                    else
-                                    {
-                                        printf("Issuer:   %s\n", issuer);
-                                        printf_xml("   <issuer><![CDATA[%s]]></issuer>\n", issuer);
-                                        printf_xml("   <self-signed>false</self-signed>\n");
-                                    }
+                                    // }
+                                    // else
+                                    // {
+                                    //     printf("Issuer:   %s\n", issuer);
+                                    //     printf_xml("   <issuer><![CDATA[%s]]></issuer>\n", issuer);
+                                    //     printf_xml("   <self-signed>false</self-signed>\n");
+                                    // }
                                 }
                             }
 
-                            // Check for certificate expiration
-                            time_t *ptime;
-                            int timediff;
-                            ptime = NULL;
+                            // // Check for certificate expiration
+                            // time_t *ptime;
+                            // int timediff;
+                            // ptime = NULL;
 
-                            printf("\nNot valid before: ");
-                            timediff = X509_cmp_time(X509_get_notBefore(x509Cert), ptime);
-                            // Certificate isn't valid yet
-                            if (timediff > 0)
-                            {
-                                printf("%s", COL_RED);
-                            }
-                            else
-                            {
-                                printf("%s", COL_GREEN);
-                            }
-                            ASN1_TIME_print(stdoutBIO, X509_get_notBefore(x509Cert));
-                            printf("%s", RESET);
+                            // printf("\nNot valid before: ");
+                            // timediff = X509_cmp_time(X509_get_notBefore(x509Cert), ptime);
+                            // // Certificate isn't valid yet
+                            // if (timediff > 0)
+                            // {
+                            //     printf("%s", COL_RED);
+                            // }
+                            // else
+                            // {
+                            //     printf("%s", COL_GREEN);
+                            // }
+                            // ASN1_TIME_print(stdoutBIO, X509_get_notBefore(x509Cert));
+                            // printf("%s", RESET);
 
-                            if (options->xmlOutput) {
-                                printf_xml("   <not-valid-before>");
-                                ASN1_TIME_print(fileBIO, X509_get_notBefore(x509Cert));
-                                printf_xml("</not-valid-before>\n");
-                                if (timediff > 0)
-                                {
-                                    printf_xml("   <not-yet-valid>true</not-yet-valid>\n");
-                                }
-                                else
-                                {
-                                    printf_xml("   <not-yet-valid>false</not-yet-valid>\n");
-                                }
-                            }
+                            // if (options->xmlOutput) {
+                            //     printf_xml("   <not-valid-before>");
+                            //     ASN1_TIME_print(fileBIO, X509_get_notBefore(x509Cert));
+                            //     printf_xml("</not-valid-before>\n");
+                            //     if (timediff > 0)
+                            //     {
+                            //         printf_xml("   <not-yet-valid>true</not-yet-valid>\n");
+                            //     }
+                            //     else
+                            //     {
+                            //         printf_xml("   <not-yet-valid>false</not-yet-valid>\n");
+                            //     }
+                            // }
 
-                            printf("\nNot valid after:  ");
-                            timediff = X509_cmp_time(X509_get_notAfter(x509Cert), ptime);
-                            // Certificate has expired
-                            if (timediff < 0)
-                            {
-                                printf("%s", COL_RED);
-                            }
-                            else
-                            {
-                                printf("%s", COL_GREEN);
-                            }
-                            ASN1_TIME_print(stdoutBIO, X509_get_notAfter(x509Cert));
-                            printf("%s", RESET);
-                            if (options->xmlOutput) {
-                                printf_xml("   <not-valid-after>");
-                                ASN1_TIME_print(fileBIO, X509_get_notAfter(x509Cert));
-                                printf_xml("</not-valid-after>\n");
-                                if (timediff < 0)
-                                {
-                                    printf_xml("   <expired>true</expired>\n");
-                                }
-                                else
-                                {
-                                    printf_xml("   <expired>false</expired>\n");
-                                }
-                            }
-                            printf("\n");
+                            // printf("\nNot valid after:  ");
+                            // timediff = X509_cmp_time(X509_get_notAfter(x509Cert), ptime);
+                            // // Certificate has expired
+                            // if (timediff < 0)
+                            // {
+                            //     printf("%s", COL_RED);
+                            // }
+                            // else
+                            // {
+                            //     printf("%s", COL_GREEN);
+                            // }
+                            // ASN1_TIME_print(stdoutBIO, X509_get_notAfter(x509Cert));
+                            // printf("%s", RESET);
+                            // if (options->xmlOutput) {
+                            //     printf_xml("   <not-valid-after>");
+                            //     ASN1_TIME_print(fileBIO, X509_get_notAfter(x509Cert));
+                            //     printf_xml("</not-valid-after>\n");
+                            //     if (timediff < 0)
+                            //     {
+                            //         printf_xml("   <expired>true</expired>\n");
+                            //     }
+                            //     else
+                            //     {
+                            //         printf_xml("   <expired>false</expired>\n");
+                            //     }
+                            // }
+                            // printf("\n");
 
                             // Free X509 Certificate...
                             X509_free(x509Cert);
                             // This is abusing status a bit, but means that we'll only get the cert once
                             status = false;
 
-                            printf_xml("  </certificate>\n");
+                            // printf_xml("  </certificate>\n");
                         }
 
                         else {
-                            printf("    Unable to parse certificate\n");
+                            // printf("    Unable to parse certificate\n");
                         }
 
                         // Free BIO
@@ -2087,14 +2103,14 @@ int checkCertificate(struct sslCheckOptions *options, const SSL_METHOD *sslMetho
                     else
                     {
                         status = false;
-                        printf_error("Could not create SSL object.");
+                        // printf_error("Could not create SSL object.");
                     }
                 }
             }
             else
             {
                 status = false;
-                printf_error("Could not set cipher.");
+                // printf_error("Could not set cipher.");
             }
 
             // Free CTX Object
@@ -2104,7 +2120,7 @@ int checkCertificate(struct sslCheckOptions *options, const SSL_METHOD *sslMetho
         else
         {
             status = false;
-            printf_error("Could not create CTX object.");
+            // printf_error("Could not create CTX object.");
         }
 
         // Disconnect from host
@@ -3159,6 +3175,8 @@ int testHost(struct sslCheckOptions *options, struct result * res)
     if ((options->tls13_supported = checkIfTLSVersionIsSupported(options, TLSv1_3))) {
         res->tls_version |= 0b00000001;
     }
+
+	res->tls_version |= 0b10000000; // check if finish test
     
     if (status == true && options->fallback )
     {
@@ -3166,11 +3184,15 @@ int testHost(struct sslCheckOptions *options, struct result * res)
         testFallback(options, NULL, res);
     }
 
+	res->protocol_downgrade |= 0b10000000; // check if finish test
+
     if (status == true && options->reneg )
     {
         // printf("  %sTLS renegotiation:%s\n", COL_BLUE, RESET);
         testRenegotiation(options, TLSv1_client_method(), res);
     }
+
+	res->reneg |= 0b10000000; // check if finish test
 
     // if (status == true && options->compression )
     // {
@@ -3202,7 +3224,9 @@ int testHost(struct sslCheckOptions *options, struct result * res)
         }
         res->heartbleed = heartbleed;
     }
-    
+	
+	res->heartbleed |= 0b10000000; // check if finish test
+
 	// Print OCSP response
 	if (status == true && options->ocspStatus == true)
 	{
@@ -3212,6 +3236,8 @@ int testHost(struct sslCheckOptions *options, struct result * res)
 #endif
 	}
     
+	res->ocsp_stapling |= 0b10000000; // check if finish test
+
     // if (options->ciphersuites)
     // {
     //     // Test supported ciphers...
@@ -3233,47 +3259,51 @@ int testHost(struct sslCheckOptions *options, struct result * res)
     else if ((status != false) && options->tls10_supported)
         status = testProtocolCiphers(options, TLSv1_client_method(), res);
     
-    return 0;
-    // Enumerate key exchange groups.
-    if (options->groups)
-        testSupportedGroups(options);
+	res->fs |= 0b10000000; // check if finish test
+	
+    // // Enumerate key exchange groups.
+    // if (options->groups)
+    //     testSupportedGroups(options);
 
-    // Enumerate signature algorithms.
-    if (options->signature_algorithms)
-        testSignatureAlgorithms(options);
+    // // Enumerate signature algorithms.
+    // if (options->signature_algorithms)
+    //     testSignatureAlgorithms(options);
 
     // Certificate checks
     if (status == true && (options->showCertificate == true || options->checkCertificate == true))
     {
         // printf_xml(" <certificates>\n");
         // Full certificate details (--show-certificates)
-        if (status == true && options->showCertificate == true)
-        {
-            status = showCertificate(options);
-        }
+        // if (status == true && options->showCertificate == true)
+        // {
+        //     status = showCertificate(options);
+        // }
 
         // Default certificate details
         if (status == true && options->checkCertificate == true)
         {
             if (status != false)
-                status = checkCertificateProtocol(options, TLSv1_3_client_method());
+                status = checkCertificateProtocol(options, TLSv1_3_client_method(), res);
             if (status != false)
-                status = checkCertificateProtocol(options, TLSv1_2_client_method());
+                status = checkCertificateProtocol(options, TLSv1_2_client_method(), res);
             if (status != false)
-                status = checkCertificateProtocol(options, TLSv1_1_client_method());
+                status = checkCertificateProtocol(options, TLSv1_1_client_method(), res);
             if (status != false)
-                status = checkCertificateProtocol(options, TLSv1_client_method());
-            if (status != false)
-                printf("Certificate information cannot be retrieved.\n\n");
+                status = checkCertificateProtocol(options, TLSv1_client_method(), res);
+            // if (status != false)
+            //     printf("Certificate information cannot be retrieved.\n\n");
         }
         // printf_xml(" </certificates>\n");
     }
 
+	res->certificate_issuer |= 0b10000000; // check if finish test
+	res->certificate_key_category |= 0b10000000; // check if finish test
+
     // Print client auth trusted CAs
-    if (options->showTrustedCAs == true)
-    {
-        status = showTrustedCAs(options);
-    }
+    // if (options->showTrustedCAs == true)
+    // {
+    //     status = showTrustedCAs(options);
+    // }
 
     // XML Output...
     // printf_xml(" </ssltest>\n");
@@ -5037,7 +5067,7 @@ int main() {
     struct result * res = (struct result *)malloc(sizeof(struct result) * line_number_max);
     memset(res, 0, sizeof(struct result) * line_number_max);
     read_csv(res, "./test.csv");
-    for (int i = 0; res[i].index != 0 && i <= 10; i++) {
+    for (int i = 1; res[i].index != 0 && i <= 10; i++) {
         test(&res[i], port);
         if (res[i].connect_error) {
             printf("%d, error\n", res[i].index);
@@ -5051,6 +5081,9 @@ int main() {
             print_char_to_binary(res[i].ocsp_stapling);
             print_char_to_binary(res[i].fs);
             printf("%d, ", res[i].fs_cipherbits);
+			print_char_to_binary(res[i].certificate_key_category);
+			printf("%d, ", res[i].certificate_keyBits);
+			print_char_to_binary(res[i].certificate_issuer);
             printf("\n");
         }
     }
