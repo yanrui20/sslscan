@@ -218,14 +218,14 @@ struct result {
     char tls_version; // 0 0 sslv2 sslv3 tls1.0 tls1.1 tls1.2 tls1.3 (support)
     char reneg; // 0 0 0 0 0 0 secure support
     char heartbleed; //  0 0 0 0 tls1.0 tls1.1 tls1.2 tls1.3 (vulnerable in) 
-    char cipher_suites; // ???
-    char fs; // ???
-    int exchange_key_strength;
+    // char cipher_suites; // ???
     int certificate_key_strength;
     char ev;
     // char certificate; // iv dv ov ev
     char protocol_downgrade; // protocol_downgrade fallback_scsv
     char ocsp_stapling; // 0 0 0 0 0 0 ocsp_resp_error support
+    char fs; // 0 0 0 0 0 0 DHE ECDHE
+    int fs_cipherbits;
 
 };
 
@@ -375,9 +375,9 @@ int testfallback(struct sslCheckOptions *, const SSL_METHOD *, struct result* );
 int testHeartbleed(struct sslCheckOptions *, const SSL_METHOD *);
 int testSupportedGroups(struct sslCheckOptions *options);
 int testSignatureAlgorithms(struct sslCheckOptions *options);
-int testCipher(struct sslCheckOptions *, const SSL_METHOD *);
+int testCipher(struct sslCheckOptions *, const SSL_METHOD *, struct result*);
 int testMissingCiphers(struct sslCheckOptions *options, unsigned int version);
-int testProtocolCiphers(struct sslCheckOptions *, const SSL_METHOD *);
+int testProtocolCiphers(struct sslCheckOptions *, const SSL_METHOD *, struct result*);
 int testConnection(struct sslCheckOptions *);
 int testHost(struct sslCheckOptions *, struct result *);
 int loadCerts(struct sslCheckOptions *);

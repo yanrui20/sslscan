@@ -1407,20 +1407,17 @@ void outputCipher(struct sslCheckOptions *options, SSL *ssl, const char *cleanSs
   char hexCipherId[8] = {0};
   char *strength;
   unsigned int tempInt = 0;
+  // printf("%s\n", options->cipherstring);
+  return;
 
-
-  printf_xml("  <cipher status=\"");
   if (cipher_accepted) {
     if (strcmp(options->cipherstring, CIPHERSUITE_LIST_ALL) && strcmp(options->cipherstring, TLSV13_CIPHERSUITES)) {
-      printf_xml("accepted\"");
       printf("Accepted  ");
     }
     else {
-      printf_xml("preferred\"");
       printf("%sPreferred%s ", COL_GREEN, RESET);
     }
 
-    printf_xml(" sslversion=\"%s\"", cleanSslMethod);
     if (strcmp(cleanSslMethod, "TLSv1.3") == 0) {
       printf("%sTLSv1.3%s  ", COL_GREEN, RESET);
     }
@@ -1523,7 +1520,6 @@ void outputCipher(struct sslCheckOptions *options, SSL *ssl, const char *cleanSs
         }
         strength = "acceptable";
     }
-    printf_xml(" strength=\"%s\"", strength);
 
     if ((options->cipher_details == true) && (ssl != NULL))
       ssl_print_tmp_key(options, ssl);
@@ -1531,17 +1527,15 @@ void outputCipher(struct sslCheckOptions *options, SSL *ssl, const char *cleanSs
     // Timing
     if (options->showTimes) {
       printf(" %s%ums%s", COL_GREY, milliseconds_elapsed, RESET);
-      printf_xml(" time=\"%u\"", milliseconds_elapsed);
     }
 
     printf("\n");
   }
 
-  printf_xml(" />\n");
 }
 
 // Test a cipher...
-int testCipher(struct sslCheckOptions *options, const SSL_METHOD *sslMethod)
+int testCipher(struct sslCheckOptions *options, const SSL_METHOD *sslMethod, struct result* res)
 {
     // Variables...
     int cipherStatus = 0;
@@ -1557,11 +1551,6 @@ int testCipher(struct sslCheckOptions *options, const SSL_METHOD *sslMethod)
     struct timeval tval_start = {0};
     unsigned int milliseconds_elapsed = 0;
 
-
-    if (options->showTimes)
-    {
-        gettimeofday(&tval_start, NULL);
-    }
 
     // Connect to host
     socketDescriptor = tcpConnect(options);
@@ -1594,7 +1583,7 @@ int testCipher(struct sslCheckOptions *options, const SSL_METHOD *sslMethod)
                 }
                 else if (cipherStatus != 1)
                 {
-                    printf_verbose("SSL_get_error(ssl, cipherStatus) said: %d\n", SSL_get_error(ssl, cipherStatus));
+                    // printf_verbose("SSL_get_error(ssl, cipherStatus) said: %d\n", SSL_get_error(ssl, cipherStatus));
                     return false;
                 }
 
@@ -1609,18 +1598,20 @@ int testCipher(struct sslCheckOptions *options, const SSL_METHOD *sslMethod)
                 {
                     ciphername = SSL_CIPHER_get_name(sslCipherPointer);
                 }
-                
 
-		// Timing
-		if (options->showTimes) {
-		  struct timeval tval_end = {0}, tval_elapsed = {0};
-
-		  gettimeofday(&tval_end, NULL);
-		  timersub(&tval_end, &tval_start, &tval_elapsed);
-		  milliseconds_elapsed = tval_elapsed.tv_sec * 1000 + (int)tval_elapsed.tv_usec / 1000;
-		}
-
-                outputCipher(options, ssl, cleanSslMethod, cipherid, ciphername, cipherbits, (cipherStatus == 1), milliseconds_elapsed);
+                // outputCipher(options, ssl, cleanSslMethod, cipherid, ciphername, cipherbits, (cipherStatus == 1), milliseconds_elapsed);
+                // printf("%s %d", ciphername, cipherbits);
+                if (strncmp("ECDHE", ciphername, 5)) {
+                    res->fs |= 0b00000001;
+                    if (cipherbits > res->fs_cipherbits) {
+                        res->fs_cipherbits = cipherbits;
+                    }
+                } else if (strncmp("DHE", ciphername, 3)) {
+                    res->fs |= 0b00000010;
+                    if (cipherbits > res->fs_cipherbits) {
+                        res->fs_cipherbits = cipherbits;
+                    }
+                }
 
                 // Disconnect SSL over socket
                 if (cipherStatus == 1)
@@ -1645,7 +1636,7 @@ int testCipher(struct sslCheckOptions *options, const SSL_METHOD *sslMethod)
             else
             {
                 status = false;
-                printf_error("Could not create SSL object.");
+                // printf_error("Could not create SSL object.");
             }
         }
         else
@@ -1689,7 +1680,7 @@ int checkCertificateProtocol(struct sslCheckOptions *options, const SSL_METHOD *
     // Error Creating Context Object
     else
     {
-        printf_error("Could not create CTX object.");
+        // printf_error("Could not create CTX object.");
         status = false;
     }
     return status;
@@ -3077,7 +3068,7 @@ int testConnection(struct sslCheckOptions *options)
     return false;
 }
 
-int testProtocolCiphers(struct sslCheckOptions *options, const SSL_METHOD *sslMethod)
+int testProtocolCiphers(struct sslCheckOptions *options, const SSL_METHOD *sslMethod, struct result* res)
 {
     int status;
     status = true;
@@ -3088,7 +3079,7 @@ int testProtocolCiphers(struct sslCheckOptions *options, const SSL_METHOD *sslMe
       strncpy(options->cipherstring, CIPHERSUITE_LIST_ALL, sizeof(options->cipherstring));
 
     // Loop until the server won't accept any more ciphers
-    while (status == true)
+    while (status == true && res->fs != 0b00000011) // 找到一个DHE和一个ECDHE直接返回
     {
         // Setup Context Object...
         options->ctx = new_CTX(sslMethod);
@@ -3105,13 +3096,13 @@ int testProtocolCiphers(struct sslCheckOptions *options, const SSL_METHOD *sslMe
                 SSL_CTX_set_min_proto_version(options->ctx, TLS1_3_VERSION);
 
             // Load Certs if required...
-            if ((options->clientCertsFile != 0) || (options->privateKeyFile != 0))
-                status = loadCerts(options);
+            // if ((options->clientCertsFile != 0) || (options->privateKeyFile != 0))
+            //     status = loadCerts(options);
 
             // Test the cipher
-            if (status == true)
-                status = testCipher(options, sslMethod);
-
+            if (status == true) 
+                status = testCipher(options, sslMethod, res);
+            
             // Free CTX Object
             FREE_CTX(options->ctx);
         }
@@ -3119,7 +3110,7 @@ int testProtocolCiphers(struct sslCheckOptions *options, const SSL_METHOD *sslMe
         // Error Creating Context Object
         else
         {
-            printf_error("Could not create CTX object.");
+            // printf_error("Could not create CTX object.");
             return false;
         }
     }
@@ -3128,9 +3119,9 @@ int testProtocolCiphers(struct sslCheckOptions *options, const SSL_METHOD *sslMe
     if (sslMethod != TLSv1_3_client_method()) {
       int tls_version = TLSv1_0;
       if (sslMethod == TLSv1_1_client_method())
-	tls_version = TLSv1_1;
+	      tls_version = TLSv1_1;
       else if (sslMethod == TLSv1_2_client_method())
-	tls_version = TLSv1_2;
+	      tls_version = TLSv1_2;
 
       testMissingCiphers(options, tls_version);
     }
@@ -3221,20 +3212,28 @@ int testHost(struct sslCheckOptions *options, struct result * res)
 #endif
 	}
     
-    if (options->ciphersuites)
-    {
-        // Test supported ciphers...
-        printf("  %sSupported Server Cipher(s):%s\n", COL_BLUE, RESET);
-        if ((status != false) && options->tls13_supported)
-            status = testProtocolCiphers(options, TLSv1_3_client_method());
-        if ((status != false) && options->tls12_supported)
-            status = testProtocolCiphers(options, TLSv1_2_client_method());
-        if ((status != false) && options->tls11_supported)
-            status = testProtocolCiphers(options, TLSv1_1_client_method());
-        if ((status != false) && options->tls10_supported)
-            status = testProtocolCiphers(options, TLSv1_client_method());
-    }
-
+    // if (options->ciphersuites)
+    // {
+    //     // Test supported ciphers...
+    //     printf("  %sSupported Server Cipher(s):%s\n", COL_BLUE, RESET);
+    //     if ((status != false) && options->tls13_supported)
+    //         status = testProtocolCiphers(options, TLSv1_3_client_method());
+    //     if ((status != false) && options->tls12_supported)
+    //         status = testProtocolCiphers(options, TLSv1_2_client_method());
+    //     if ((status != false) && options->tls11_supported)
+    //         status = testProtocolCiphers(options, TLSv1_1_client_method());
+    //     if ((status != false) && options->tls10_supported)
+    //         status = testProtocolCiphers(options, TLSv1_client_method());
+    // }
+    // test FS, no need to test tls1.3, only test the highest version
+    if ((status != false) && options->tls12_supported)
+        status = testProtocolCiphers(options, TLSv1_2_client_method(), res);
+    else if ((status != false) && options->tls11_supported)
+        status = testProtocolCiphers(options, TLSv1_1_client_method(), res);
+    else if ((status != false) && options->tls10_supported)
+        status = testProtocolCiphers(options, TLSv1_client_method(), res);
+    
+    return 0;
     // Enumerate key exchange groups.
     if (options->groups)
         testSupportedGroups(options);
@@ -5050,6 +5049,8 @@ int main() {
             print_char_to_binary(res[i].reneg);
             print_char_to_binary(res[i].heartbleed);
             print_char_to_binary(res[i].ocsp_stapling);
+            print_char_to_binary(res[i].fs);
+            printf("%d, ", res[i].fs_cipherbits);
             printf("\n");
         }
     }
