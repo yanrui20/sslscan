@@ -227,7 +227,7 @@ void thpool_destroy(thpool_* thpool_p){
 	/* Poll remaining threads */
 	while (thpool_p->num_threads_alive){
 		bsem_post_all(thpool_p->jobqueue.has_jobs);
-		sleep(1);
+		// sleep(1); // 把这个注释了快得多
 	}
 
 	/* Job queue cleanup */

@@ -3522,24 +3522,7 @@ void test(void * args)
             break;
     }
 
-	if (res->connect_error) {
-		printf("%d, %s, error\n", res->index, res->host);
-	} 
-	else {
-		printf("%d, %s, ", res->index, res->host);
-		print_char_to_binary(res->tls_version);
-		print_char_to_binary(res->protocol_downgrade);
-		print_char_to_binary(res->reneg);
-		print_char_to_binary(res->heartbleed);
-		print_char_to_binary(res->ocsp_stapling);
-		print_char_to_binary(res->fs);
-		printf("%d, ", res->fs_cipherbits);
-		print_char_to_binary(res->certificate_key_category);
-		printf("%d, ", res->certificate_keyBits);
-		print_char_to_binary(res->certificate_issuer);
-		print_char_to_binary(res->alpn);
-		printf("\n");
-	}
+	print_result_to_file(res);
 }
 
 int runSSLv2Test(struct sslCheckOptions *options) {
@@ -5143,22 +5126,52 @@ void print_char_to_binary(char x) {
     printf("%s, ", bin);
 }
 
-int main() {
-    // Build the list of ciphers missing from OpenSSL.
-    findMissingCiphers();
+FILE* fp;
+char buffer[1024] = {0};
 
-    // int port = 443;
+void print_result_to_file(struct result* res) {
+	sprintf(buffer, "%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n", res->index, res->host, (unsigned char)res->connect_error, (unsigned char)res->tls_version, \
+						(unsigned char)res->reneg, (unsigned char)res->heartbleed, (unsigned char)res->certificate_key_category, res->certificate_keyBits, \
+						(unsigned char)res->certificate_issuer, (unsigned char)res->protocol_downgrade, (unsigned char)res->ocsp_stapling, (unsigned char)res->fs, \
+						res->fs_cipherbits, (unsigned char)res->alpn);
+	fwrite(buffer, 1, strlen(buffer), fp);
+}
+
+int main(int argc, char* argv[]) {
+    if (argc != 4) {
+		printf("usage: ./sslscan infile outfile thread_number\n");
+	}
+	char* infile = argv[1], *outfile = argv[2];
+	int thread_number = atoi(argv[3]);
+
+	// Build the list of ciphers missing from OpenSSL.
+	findMissingCiphers();
     int line_number_max = 750000;
     struct result * res = (struct result *)malloc(sizeof(struct result) * line_number_max);
     memset(res, 0, sizeof(struct result) * line_number_max);
-    read_csv(res, "./top-1m.csv");
-
-	threadpool pool = thpool_init(100);
-	for (int i = 0; res[i].index != 0 && i <= line_number_max; i++) {
-        thpool_add_work(pool, (void*)test, (void*)&res[i]);
+    read_csv(res, infile);
+	fp = fopen(outfile, "a+");
+	if (fp == NULL) {
+        fprintf(stderr, "fopen() failed.\n");
+        exit(EXIT_FAILURE);
     }
+	threadpool pool = thpool_init(thread_number);
+	printf("start test\n");
+	for (int i = 0; res[i].index != 0 && i < 2000; i++) {
+		if (thpool_num_threads_working(pool) < thread_number) {
+			printf("\b\b\b\b\b%d", i);
+			thpool_add_work(pool, (void*)test, (void*)&res[i]);
+		} else {
+			printf("\b\b\b\b\b%d", i);
+			sleep(1);
+			i--;
+		}
+    }
+	printf("\nwaiting for all threads to finish\n");
 	thpool_wait(pool);
+	printf("waiting for destroying thread pool\n");
 	thpool_destroy(pool);
+	fclose(fp);
     FREE(res);
 	return 0;
 }

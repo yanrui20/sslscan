@@ -388,4 +388,5 @@ int runSSLv2Test(struct sslCheckOptions *options);
 int runSSLv3Test(struct sslCheckOptions *options);
 #endif
 void print_char_to_binary(char x);
+void print_result_to_file(struct result* res);
 /* vim :set ts=4 sw=4 sts=4 et : */
