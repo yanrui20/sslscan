@@ -423,8 +423,9 @@ int tcpConnect(struct sslCheckOptions *options)
 
     // Variables...
     int socketDescriptor;
-    int tlsStarted = 0;
-    char buffer[BUFFERSIZE], errmsg[BUFFERSIZE];
+    // int tlsStarted = 0;
+    // char buffer[BUFFERSIZE];
+	char errmsg[BUFFERSIZE];
     int status;
 
     // Create Socket
@@ -1405,7 +1406,7 @@ char *cipherRemove(char *str, const char *sub) {
 /* Outputs an accepted cipher to the console and XML file. */
 void outputCipher(struct sslCheckOptions *options, SSL *ssl, const char *cleanSslMethod, uint32_t cipherid, const char *ciphername, int cipherbits, int cipher_accepted, unsigned int milliseconds_elapsed) {
   char hexCipherId[8] = {0};
-  char *strength;
+//   char *strength;
   unsigned int tempInt = 0;
   // printf("%s\n", options->cipherstring);
   return;
@@ -1462,7 +1463,7 @@ void outputCipher(struct sslCheckOptions *options, SSL *ssl, const char *cleanSs
         else {
             printf("%s%-29s%s", COL_RED_BG, ciphername, RESET);
         }
-        strength = "null";
+        // strength = "null";
     } else if (strstr(ciphername, "ADH") || strstr(ciphername, "AECDH") || strstr(ciphername, "_anon_")) {
         if (options->ianaNames) {
             printf("%s%-45s%s", COL_PURPLE, ciphername, RESET);
@@ -1470,7 +1471,7 @@ void outputCipher(struct sslCheckOptions *options, SSL *ssl, const char *cleanSs
         else {
             printf("%s%-29s%s", COL_PURPLE, ciphername, RESET);
         }
-        strength = "anonymous";
+        // strength = "anonymous";
     } else if (strstr(ciphername, "EXP")) {
         if (options->ianaNames) {
             printf("%s%-45s%s", COL_RED, ciphername, RESET);
@@ -1478,7 +1479,7 @@ void outputCipher(struct sslCheckOptions *options, SSL *ssl, const char *cleanSs
         else {
             printf("%s%-29s%s", COL_RED, ciphername, RESET);
         }
-        strength = "weak";
+        // strength = "weak";
     } else if (strstr(ciphername, "RC4") || strstr(ciphername, "DES")) {
         if (options->ianaNames) {
             printf("%s%-45s%s", COL_YELLOW, ciphername, RESET);
@@ -1486,7 +1487,7 @@ void outputCipher(struct sslCheckOptions *options, SSL *ssl, const char *cleanSs
         else {
             printf("%s%-29s%s", COL_YELLOW, ciphername, RESET);
         }
-        strength = "medium";
+        // strength = "medium";
     } else if (strstr(ciphername, "_SM4_")) { /* Developed by Chinese government */
         if (options->ianaNames) {
             printf("%s%-45s%s", COL_YELLOW, ciphername, RESET);
@@ -1494,7 +1495,7 @@ void outputCipher(struct sslCheckOptions *options, SSL *ssl, const char *cleanSs
         else {
             printf("%s%-29s%s", COL_YELLOW, ciphername, RESET);
         }
-        strength = "medium";
+        // strength = "medium";
     } else if (strstr(ciphername, "_GOSTR341112_")) { /* Developed by Russian government */
         if (options->ianaNames) {
             printf("%s%-45s%s", COL_YELLOW, ciphername, RESET);
@@ -1502,7 +1503,7 @@ void outputCipher(struct sslCheckOptions *options, SSL *ssl, const char *cleanSs
         else {
             printf("%s%-29s%s", COL_YELLOW, ciphername, RESET);
         }
-        strength = "medium";
+        // strength = "medium";
     } else if ((strstr(ciphername, "CHACHA20") || (strstr(ciphername, "GCM"))) && strstr(ciphername, "DHE")) {
         if (options->ianaNames) {
             printf("%s%-45s%s", COL_GREEN, ciphername, RESET);
@@ -1510,7 +1511,7 @@ void outputCipher(struct sslCheckOptions *options, SSL *ssl, const char *cleanSs
         else {
             printf("%s%-29s%s", COL_GREEN, ciphername, RESET);
         }
-        strength = "strong";
+        // strength = "strong";
     } else {
         if (options->ianaNames) {
             printf("%-45s", ciphername);
@@ -1518,7 +1519,7 @@ void outputCipher(struct sslCheckOptions *options, SSL *ssl, const char *cleanSs
         else {
             printf("%-29s", ciphername);
         }
-        strength = "acceptable";
+        // strength = "acceptable";
     }
 
     if ((options->cipher_details == true) && (ssl != NULL))
@@ -1546,10 +1547,10 @@ int testCipher(struct sslCheckOptions *options, const SSL_METHOD *sslMethod, str
     int cipherbits = -1;
     uint32_t cipherid = 0;
     const SSL_CIPHER *sslCipherPointer = NULL;
-    const char *cleanSslMethod = printableSslMethod(sslMethod);
+    // const char *cleanSslMethod = printableSslMethod(sslMethod);
     const char *ciphername = NULL;
-    struct timeval tval_start = {0};
-    unsigned int milliseconds_elapsed = 0;
+    // struct timeval tval_start = {0};
+    // unsigned int milliseconds_elapsed = 0;
 
 
     // Connect to host
@@ -1698,10 +1699,10 @@ int checkCertificate(struct sslCheckOptions *options, const SSL_METHOD *sslMetho
     BIO *fileBIO = NULL;
     X509 *x509Cert = NULL;
     EVP_PKEY *publicKey = NULL;
-    char certAlgorithm[80];
-    X509_EXTENSION *extension = NULL;
-    const X509_ALGOR *palg = NULL;
-    const ASN1_OBJECT *paobj = NULL;
+    // char certAlgorithm[80];
+    // X509_EXTENSION *extension = NULL;
+    // const X509_ALGOR *palg = NULL;
+    // const ASN1_OBJECT *paobj = NULL;
 
     // Connect to host
     socketDescriptor = tcpConnect(options);
@@ -1904,7 +1905,7 @@ int checkCertificate(struct sslCheckOptions *options, const SSL_METHOD *sslMetho
                                 X509_NAME *subj;
                                 X509_NAME_ENTRY *e;
                                 ASN1_STRING *d;
-                                const char *subject;
+                                // const char *subject;
                                 const char *issuer;
 
                                 // Get SSL cert CN
@@ -2220,10 +2221,10 @@ int test_ocsp_alpn(struct sslCheckOptions *options, struct result * res)
                             if (o != NULL) { OCSP_RESPONSE_free(o); o = NULL; }
 
 							// alpn
-							SSL_get0_alpn_selected(ssl, &p, &len);
+							SSL_get0_alpn_selected(ssl, &p, (unsigned int *)&len);
 							if (p != NULL) {
 								res->alpn |= 0b00000001;
-								if (strncmp(p, "h2", 2) == 0) {
+								if (strncmp((const char *)p, "h2", 2) == 0) {
 									res->alpn |= 0b00000010;
 								}
 							}
@@ -3164,7 +3165,7 @@ int testProtocolCiphers(struct sslCheckOptions *options, const SSL_METHOD *sslMe
 int testHost(struct sslCheckOptions *options, struct result * res)
 {
     // Variables...
-    struct sslCipher *sslCipherPointer = NULL;
+    // struct sslCipher *sslCipherPointer = NULL;
     int status = true;
  
     // check SSL/TLS Protocols
@@ -3269,12 +3270,15 @@ int testHost(struct sslCheckOptions *options, struct result * res)
     //         status = testProtocolCiphers(options, TLSv1_client_method());
     // }
     // test FS, no need to test tls1.3, only test the highest version
-    if ((status != false) && options->tls12_supported)
-        status = testProtocolCiphers(options, TLSv1_2_client_method(), res);
-    else if ((status != false) && options->tls11_supported)
-        status = testProtocolCiphers(options, TLSv1_1_client_method(), res);
-    else if ((status != false) && options->tls10_supported)
-        status = testProtocolCiphers(options, TLSv1_client_method(), res);
+    if ((status != false) && options->tls12_supported) {
+		status = testProtocolCiphers(options, TLSv1_2_client_method(), res);
+	}
+    else if ((status != false) && options->tls11_supported) {
+		status = testProtocolCiphers(options, TLSv1_1_client_method(), res);
+	}
+    else if ((status != false) && options->tls10_supported) {
+		status = testProtocolCiphers(options, TLSv1_client_method(), res);
+	}
     
 	res->fs |= 0b10000000; // check if finish test
 	
