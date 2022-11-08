@@ -957,10 +957,11 @@ int testFallback(struct sslCheckOptions *options,  const SSL_METHOD *sslMethod, 
     else
     {
         // Could not connect
-        printf_error("test fallback: Could not connect.");
+        // printf_error("test fallback: Could not connect.");
         // exit(1);
-		pthread_exit(NULL);
-		// return status;
+		// pthread_exit(NULL);
+		res->protocol_downgrade |= 0b01000000; // connect error
+		return status;
     }
 
     // Call function again with downgraded protocol
@@ -1144,11 +1145,13 @@ int testRenegotiation(struct sslCheckOptions *options, const SSL_METHOD *sslMeth
     else
     {
         // Could not connect
-        printf_error("reneg: Could not connect.");
+        // printf_error("reneg: Could not connect.");
         renOut->supported = false;
-        freeRenegotiationOutput( renOut );
+        // freeRenegotiationOutput( renOut );
         // exit(1);
-		pthread_exit(NULL);
+		// pthread_exit(NULL);
+		resu->reneg |= 0b01000000; // connect error
+
     }
     // outputRenegotiation(options, renOut);
     resu->reneg = (renOut->supported | renOut->secure << 1);
@@ -1296,10 +1299,10 @@ int testHeartbleed(struct sslCheckOptions *options, const SSL_METHOD *sslMethod)
     else
     {
         // Could not connect
-        printf_error("test heartbleed: Could not connect.");
+        // printf_error("test heartbleed: Could not connect.");
         // printf("dying");
         // exit(1);
-		pthread_exit(NULL);
+		return -1; // connect error
     }
 
     // return status;
@@ -2267,9 +2270,11 @@ int test_ocsp_alpn(struct sslCheckOptions *options, struct result * res)
     }
 
     // Could not connect
-    else
-        status = false;
-
+    else {
+		status = false;
+		res->ocsp_stapling |= 0b01000000; // connect error
+		res->alpn |= 0b01000000; // connect error
+	}
     return status;
 }
 
@@ -3227,28 +3232,48 @@ int testHost(struct sslCheckOptions *options, struct result * res)
     if (status == true && options->heartbleed )
     {
         // printf("  %sHeartbleed:%s\n", COL_BLUE, RESET);
-        char heartbleed = 0;
+        // char heartbleed = 0;
+		int st = 0;
 #if OPENSSL_VERSION_NUMBER >= 0x10001000L
         if (options->tls13_supported)
         {
-            heartbleed |= testHeartbleed(options, TLSv1_3_client_method());
+            st = testHeartbleed(options, TLSv1_3_client_method());
+			if (st >= 0) {
+				res->heartbleed |= st;
+			} else {
+				res->heartbleed |= 0b01000000; // connect error 
+			}
         }
         if (options->tls12_supported)
         {
-            heartbleed |= testHeartbleed(options, TLSv1_2_client_method()) << 1;
+            st = testHeartbleed(options, TLSv1_2_client_method());
+			if (st >= 0) {
+				res->heartbleed |= st << 1;
+			} else {
+				res->heartbleed |= 0b01000000; // connect error 
+			}
         }
         if (options->tls11_supported)
         {
-            heartbleed |= testHeartbleed(options, TLSv1_1_client_method()) << 2;
+            st = testHeartbleed(options, TLSv1_1_client_method());
+			if (st >= 0) {
+				res->heartbleed |= st << 2;
+			} else {
+				res->heartbleed |= 0b01000000; // connect error 
+			}
         }
 #endif
         if (options->tls10_supported)
         {
-            heartbleed |= testHeartbleed(options, TLSv1_client_method()) << 3;
+            st = testHeartbleed(options, TLSv1_client_method());
+			if (st >= 0) {
+				res->heartbleed |= st << 3;
+			} else {
+				res->heartbleed |= 0b01000000; // connect error 
+			}
         }
-        res->heartbleed = heartbleed;
+        
     }
-	
 	res->heartbleed |= 0b10000000; // check if finish test
 
 	// Print OCSP response
@@ -4521,15 +4546,13 @@ int testMissingCiphers(struct sslCheckOptions *options, unsigned int tls_version
     /* Its impossible for one byte to overflow an unsigned int (on any modern hardware), but still... */
     if ((session_id_len + 43 + 2 + 1) < session_id_len) {
       fprintf(stderr, "Error: potential integer overflow averted (%d).\n", session_id_len);
-    //   exit(-1);
-		pthread_exit(NULL);
+      exit(-1);
     }
 
     /* Check that the session ID length wouldn't put us past our buffer boundary. */
     if ((session_id_len + 43 + 2 + 1) > bs_get_len(server_hello)) {
       fprintf(stderr, "Error: size of server_hello (%"SIZE_T_FMT") is not large enough to reach cipher suite (%u).\n", sizeof(server_hello), session_id_len + 43 + 2);
-    //   exit(-1);
-		pthread_exit(NULL);
+      exit(-1);
     }
 
     /* Extract the cipher ID. */
@@ -5091,8 +5114,7 @@ void read_csv(struct result * ret, char *path) {
     FILE* fp = fopen(path, "r");
     if (fp == NULL) {
         fprintf(stderr, "fopen() failed.\n");
-        // exit(EXIT_FAILURE);
-		pthread_exit(NULL);
+        exit(EXIT_FAILURE);
     }
     int buf_size = 512;
     char buf[buf_size];
