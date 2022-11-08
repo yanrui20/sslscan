@@ -24,7 +24,7 @@ else
 	PREFIX ?= /usr
 endif
 
-SRCS      = sslscan.c
+SRCS      = sslscan.c thpool.c
 BINDIR    = $(PREFIX)/bin
 MANDIR    = $(PREFIX)/share/man
 MAN1DIR   = $(MANDIR)/man1
