@@ -22,3 +22,6 @@ zlib_mingw/
 
 # vscode
 .vscode
+
+# csv
+top-1m.csv

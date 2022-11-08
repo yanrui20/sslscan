@@ -5087,8 +5087,8 @@ int main() {
     int line_number_max = 750000;
     struct result * res = (struct result *)malloc(sizeof(struct result) * line_number_max);
     memset(res, 0, sizeof(struct result) * line_number_max);
-    read_csv(res, "./test.csv");
-    for (int i = 1; res[i].index != 0 && i <= 10; i++) {
+    read_csv(res, "./top-1m.csv");
+    for (int i = 0; res[i].index != 0 && i <= 100; i++) {
         test(&res[i], port);
         if (res[i].connect_error) {
             printf("%d, error\n", res[i].index);

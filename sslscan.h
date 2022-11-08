@@ -217,12 +217,10 @@ struct result {
     char connect_error;
     char tls_version; // test 0 sslv2 sslv3 tls1.0 tls1.1 tls1.2 tls1.3 (support)
     char reneg; // test 0 0 0 0 0 secure support
-    char heartbleed; //  test 0 0 0 tls1.0 tls1.1 tls1.2 tls1.3 (vulnerable in) 
-    // char cipher_suites; // ???
+    char heartbleed; //  test 0 0 0 tls1.0 tls1.1 tls1.2 tls1.3 (vulnerable) 
     char certificate_key_category; // test 0 0 0 ECC DSA RSA ERROR
     int certificate_keyBits;
     char certificate_issuer; // test 0 0 0 have_no_cn dv ov ev
-    // char certificate; // iv dv ov ev
     char protocol_downgrade; // test 0 0 0 0 0 protocol_downgrade fallback_scsv
     char ocsp_stapling; // test 0 0 0 0 0 ocsp_resp_error support
     char fs; // test 0 0 0 0 0 DHE ECDHE
