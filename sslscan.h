@@ -227,7 +227,7 @@ struct result {
     char ocsp_stapling; // test 0 0 0 0 0 ocsp_resp_error support
     char fs; // test 0 0 0 0 0 DHE ECDHE
     int fs_cipherbits;
-
+    char alpn; // test 0 0 0 0 0 HTTP2 ALPN
 };
 
 // store renegotiation test data

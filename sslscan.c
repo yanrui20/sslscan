@@ -2135,7 +2135,7 @@ int checkCertificate(struct sslCheckOptions *options, const SSL_METHOD *sslMetho
 }
 
 // Request a stapled OCSP request from the server.
-int ocspRequest(struct sslCheckOptions *options, struct result * res)
+int test_ocsp_alpn(struct sslCheckOptions *options, struct result * res)
 {
     int cipherStatus = 0;
     int status = true;
@@ -2190,6 +2190,13 @@ int ocspRequest(struct sslCheckOptions *options, struct result * res)
 #endif
 						SSL_set_tlsext_status_type(ssl, TLSEXT_STATUSTYPE_ocsp);
 						// SSL_CTX_set_tlsext_status_cb(options->ctx, ocsp_resp_cb);
+						// alpn
+						unsigned char protos[] = {
+							2, 'h', '2',
+							3, 'h', '2', 'c',
+							8, 'h', 't', 't', 'p', '/', '1', '.', '1'
+						};
+						SSL_set_alpn_protos(ssl, protos, sizeof(protos));
                         
 						// Connect SSL over socket
                         cipherStatus = SSL_connect(ssl);
@@ -2211,6 +2218,15 @@ int ocspRequest(struct sslCheckOptions *options, struct result * res)
                             //     res->ocsp_stapling = 0;  // No OCSP response received. default
                             // }
                             if (o != NULL) { OCSP_RESPONSE_free(o); o = NULL; }
+
+							// alpn
+							SSL_get0_alpn_selected(ssl, &p, &len);
+							if (p != NULL) {
+								res->alpn |= 0b00000001;
+								if (strncmp(p, "h2", 2) == 0) {
+									res->alpn |= 0b00000010;
+								}
+							}
                             SSL_shutdown(ssl);
                         }
                         FREE_SSL(ssl);
@@ -3232,11 +3248,12 @@ int testHost(struct sslCheckOptions *options, struct result * res)
 	{
 		// printf("  %sOCSP Stapling Request:%s\n", COL_BLUE, RESET);
 #if OPENSSL_VERSION_NUMBER > 0x00908000L && !defined(OPENSSL_NO_TLSEXT)
-		status = ocspRequest(options, res);
+		status = test_ocsp_alpn(options, res);
 #endif
 	}
     
 	res->ocsp_stapling |= 0b10000000; // check if finish test
+	res->alpn |= 0b10000000; // check if finish test
 
     // if (options->ciphersuites)
     // {
@@ -5084,9 +5101,11 @@ int main() {
 			print_char_to_binary(res[i].certificate_key_category);
 			printf("%d, ", res[i].certificate_keyBits);
 			print_char_to_binary(res[i].certificate_issuer);
+			print_char_to_binary(res[i].alpn);
             printf("\n");
         }
     }
+	
 
     FREE(res);
 }
