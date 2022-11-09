@@ -24,5 +24,4 @@ zlib_mingw/
 .vscode
 
 # csv
-top-1m.csv
-result.csv
+*.csv

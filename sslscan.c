@@ -5147,6 +5147,7 @@ int main(int argc, char* argv[]) {
 	// Build the list of ciphers missing from OpenSSL.
 	findMissingCiphers();
     int line_number_max = 750000;
+    int check_size = 2000;
     struct result * res = (struct result *)malloc(sizeof(struct result) * line_number_max);
     memset(res, 0, sizeof(struct result) * line_number_max);
     read_csv(res, infile);
@@ -5157,21 +5158,54 @@ int main(int argc, char* argv[]) {
     }
 	threadpool pool = thpool_init(thread_number);
 	printf("start test\n");
-	for (int i = 0; res[i].index != 0 && i < 2000; i++) {
+	for (int i = 0; res[i].index != 0 && i < check_size; i++) {
 		if (thpool_num_threads_working(pool) < thread_number) {
-			printf("\b\b\b\b\b%d", i);
+			printf("\b\b\b\b\b\b\b\b\b\b\b\bdoing:%d", i);
 			thpool_add_work(pool, (void*)test, (void*)&res[i]);
 		} else {
-			printf("\b\b\b\b\b%d", i);
+			printf("\b\b\b\b\b\b\b\b\b\b\b\bdoing:%d", i);
 			sleep(1);
 			i--;
 		}
     }
 	printf("\nwaiting for all threads to finish\n");
 	thpool_wait(pool);
-	printf("waiting for destroying thread pool\n");
+	fclose(fp);
+    int errnum = 0;
+    for (int i = 0; i < check_size; i++) {
+        errnum += res[i].connect_error;
+    }
+    printf("check size:%d, error number: %d\n", check_size, errnum);
+
+    printf("recheck err\n");
+    fp = fopen("error.csv", "a+");
+	if (fp == NULL) {
+        fprintf(stderr, "fopen() failed.\n");
+        exit(EXIT_FAILURE);
+    }
+    for (int i = 0; res[i].index != 0 && i < check_size; i++) {
+		if (thpool_num_threads_working(pool) < thread_number) {
+			printf("\b\b\b\b\b\b\b\b\b\b\b\bdoing:%d", i);
+            if (res[i].connect_error) {
+                res[i].connect_error = 0;
+                thpool_add_work(pool, (void*)test, (void*)&res[i]);
+            }
+		} else {
+			printf("\b\b\b\b\b\b\b\b\b\b\b\bdoing:%d", i);
+			sleep(1);
+			i--;
+		}
+    }
+    printf("\nwaiting for all threads to finish\n");
+	thpool_wait(pool);
+    errnum = 0;
+    for (int i = 0; i < check_size; i++) {
+        errnum += res[i].connect_error;
+    }
+    printf("check size:%d, error number: %d\n", check_size, errnum);
+	printf("waiting to destroy the thread pool\n");
 	thpool_destroy(pool);
 	fclose(fp);
-    FREE(res);
+	FREE(res);
 	return 0;
 }
