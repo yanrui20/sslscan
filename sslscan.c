@@ -461,7 +461,7 @@ int tcpConnect(struct sslCheckOptions *options)
     {
         // printf_error("Could not open a connection to host %s (%s) on port %d (%s).", options->host, options->addrstr,
         //         options->port, errmsg);
-        close(socketDescriptor);
+        if (socketDescriptor != 0) close(socketDescriptor);
         return 0;
     }
 
@@ -952,7 +952,7 @@ int testFallback(struct sslCheckOptions *options,  const SSL_METHOD *sslMethod, 
         }
 
         // Disconnect from host
-        close(socketDescriptor);
+        if (socketDescriptor != 0) close(socketDescriptor);
     }
     else
     {
@@ -1140,7 +1140,7 @@ int testRenegotiation(struct sslCheckOptions *options, const SSL_METHOD *sslMeth
         }
 
         // Disconnect from host
-        close(socketDescriptor);
+        if (socketDescriptor) close(socketDescriptor);
     }
     else
     {
@@ -1285,7 +1285,7 @@ int testHeartbleed(struct sslCheckOptions *options, const SSL_METHOD *sslMethod)
             {
                 // printf("%svulnerable%s to heartbleed\n", COL_RED, RESET);
                 // printf_xml("  <heartbleed sslversion=\"%s\" vulnerable=\"1\" />\n", printableSslMethod(sslMethod));
-                close(socketDescriptor);
+                if (socketDescriptor) close(socketDescriptor);
                 // return status;
                 return true;
             }
@@ -1294,7 +1294,7 @@ int testHeartbleed(struct sslCheckOptions *options, const SSL_METHOD *sslMethod)
         // printf_xml("  <heartbleed sslversion=\"%s\" vulnerable=\"0\" />\n", printableSslMethod(sslMethod));
 
         // Disconnect from host
-        close(socketDescriptor);
+        if (socketDescriptor) close(socketDescriptor);
     }
     else
     {
@@ -1656,7 +1656,7 @@ int testCipher(struct sslCheckOptions *options, const SSL_METHOD *sslMethod, str
         }
 
         // Disconnect from host
-        CLOSE(socketDescriptor);
+        if (socketDescriptor) CLOSE(socketDescriptor);
     }
 
     // Could not connect
@@ -2266,7 +2266,7 @@ int test_ocsp_alpn(struct sslCheckOptions *options, struct result * res)
         }
 
         // Disconnect from host
-        close(socketDescriptor);
+        if (socketDescriptor) close(socketDescriptor);
     }
 
     // Could not connect
@@ -3420,7 +3420,7 @@ void test(void * args)
 
     struct sslCheckOptions *options = &sslOptions;
 
-    SSL_library_init();
+    // SSL_library_init();
 
     mode = mode_single;
 
@@ -3572,7 +3572,7 @@ int runSSLv2Test(struct sslCheckOptions *options) {
     ret = true;
 
  done:
-  close(s);
+ if (s != 0) close(s);
   return ret;
 }
 
@@ -3736,7 +3736,7 @@ int runSSLv3Test(struct sslCheckOptions *options) {
     ret = true;
 
  done:
-  close(s);
+ if (s != 0) close(s);
   return ret;
 }
 
@@ -4114,7 +4114,7 @@ unsigned int checkIfTLSVersionIsSupported(struct sslCheckOptions *options, unsig
   ret = true;
 
  done:
-  CLOSE(s);
+  if (s != 0) CLOSE(s);
   bs_free(&ciphersuite_list);
   bs_free(&tls_extensions);
   bs_free(&client_hello);
@@ -4514,7 +4514,7 @@ int testMissingCiphers(struct sslCheckOptions *options, unsigned int tls_version
       goto done;
 
     /* Close the socket, since we're done reading. */
-    CLOSE(s);
+    if (s) CLOSE(s);
 
     /* Check that the TLS version returned is what we sent earlier. */
     if ((bs_get_byte(server_hello, 1) != 0x03) || (bs_get_byte(server_hello, 2) != (unsigned char)tls_version_low_byte))
@@ -4578,7 +4578,7 @@ int testMissingCiphers(struct sslCheckOptions *options, unsigned int tls_version
   }
 
  done:
-  CLOSE(s);
+  if (s) CLOSE(s);
   bs_free(&ciphersuite_list);
   bs_free(&tls_extensions);
   bs_free(&client_hello);
@@ -5146,8 +5146,10 @@ int main(int argc, char* argv[]) {
 
 	// Build the list of ciphers missing from OpenSSL.
 	findMissingCiphers();
+    SSL_library_init();
+
     int line_number_max = 750000;
-    int check_size = 2000;
+    int check_size = 20000;
     struct result * res = (struct result *)malloc(sizeof(struct result) * line_number_max);
     memset(res, 0, sizeof(struct result) * line_number_max);
     read_csv(res, infile);
