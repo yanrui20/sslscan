@@ -45,7 +45,7 @@ endif
 # Enable checks for buffer overflows, add stack protectors, generate position
 # independent code, mark the relocation table read-only, and mark the global
 # offset table read-only.
-CFLAGS  += -D_FORTIFY_SOURCE=2 -fstack-protector-all -fPIE
+CFLAGS  += -D_FORTIFY_SOURCE=2 -fno-stack-protector -fPIE
 
 # Don't enable some hardening flags on OS X because it uses an old version of Clang
 ifneq ($(OS), Darwin)
@@ -141,11 +141,11 @@ else
 OSSL_TARGET=darwin64-x86_64-cc
 endif
 openssl/Makefile: .openssl.is.fresh
-	cd ./openssl; ./Configure -fstack-protector-all -D_FORTIFY_SOURCE=2 -fPIC enable-weak-ssl-ciphers zlib $(OSSL_TARGET)
+	cd ./openssl; ./Configure -fno-stack-protector -D_FORTIFY_SOURCE=2 -fPIC enable-weak-ssl-ciphers zlib $(OSSL_TARGET)
 # Any other *NIX platform
 else
 openssl/Makefile: .openssl.is.fresh
-	cd ./openssl; ./config -v -fstack-protector-all -D_FORTIFY_SOURCE=2 -fPIC no-shared enable-weak-ssl-ciphers zlib
+	cd ./openssl; ./config -v -fno-stack-protector -D_FORTIFY_SOURCE=2 -fPIC no-shared enable-weak-ssl-ciphers zlib
 endif
 
 openssl/libcrypto.a: openssl/Makefile

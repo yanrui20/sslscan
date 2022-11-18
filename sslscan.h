@@ -214,10 +214,10 @@ struct sslCheckOptions
 struct result {
     int index;
     char host[512];
-    char connect_error;
+    char connect_error; // 0 0 0 0 0 0 TLS_VER_ERR error
     char tls_version; // test 0 sslv2 sslv3 tls1.0 tls1.1 tls1.2 tls1.3 (support)
     char reneg; // test connect_error 0 0 0 0 secure support
-    char heartbleed; //  test connect_error 0 0 tls1.0 tls1.1 tls1.2 tls1.3 (vulnerable) 
+    char heartbleed; //  test error 0 0 tls1.0 tls1.1 tls1.2 tls1.3 (vulnerable) 
     char certificate_key_category; // test 0 0 0 ECC DSA RSA ERROR
     int certificate_keyBits;
     char certificate_issuer; // test 0 0 0 have_no_cn dv ov ev
@@ -389,4 +389,5 @@ int runSSLv3Test(struct sslCheckOptions *options);
 #endif
 void print_char_to_binary(char x);
 void print_result_to_file(struct result* res);
+void cleanBuff(int sock_conn);
 /* vim :set ts=4 sw=4 sts=4 et : */

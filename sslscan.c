@@ -419,6 +419,7 @@ int tcpConnect(struct sslCheckOptions *options) {
 	// Create Socket
 	if (options->h_addrtype == AF_INET) {
 		socketDescriptor = socket(AF_INET, SOCK_STREAM, 0);
+		// socketDescriptor = socket(AF_INET, SOCK_STREAM, MSG_NOSIGNAL);
 	} else    // IPv6
 	{
 		socketDescriptor = socket(AF_INET6, SOCK_STREAM, 0);
@@ -446,6 +447,7 @@ int tcpConnect(struct sslCheckOptions *options) {
 		// printf_error("Could not open a connection to host %s (%s) on port %d (%s).", options->host, options->addrstr,
 		//         options->port, errmsg);
 		if (socketDescriptor != 0) close(socketDescriptor);
+		else cleanBuff(socketDescriptor);
 		return 0;
 	}
 
@@ -718,7 +720,7 @@ int testCompression(struct sslCheckOptions *options, const SSL_METHOD *sslMethod
 		// Could not connect
 		printf_error("test compression: Could not connect.");
 		// exit(1);
-		pthread_exit(NULL);
+		pthread_exit(NULL); // no need to optimize
 	}
 
 	return status;
@@ -882,6 +884,7 @@ int testFallback(struct sslCheckOptions *options,  const SSL_METHOD *sslMethod, 
 
 		// Disconnect from host
 		if (socketDescriptor != 0) close(socketDescriptor);
+		else cleanBuff(socketDescriptor);
 	}
 	else
 	{
@@ -1055,6 +1058,7 @@ int testRenegotiation(struct sslCheckOptions *options, const SSL_METHOD *sslMeth
 
 		// Disconnect from host
 		if (socketDescriptor) close(socketDescriptor);
+		else cleanBuff(socketDescriptor);
 	} else {
 		// Could not connect
 		// printf_error("reneg: Could not connect.");
@@ -1133,9 +1137,11 @@ int testHeartbleed(struct sslCheckOptions *options, const SSL_METHOD *sslMethod)
 			hello[10] = 0x03;
 		}
 		if (send(socketDescriptor, hello, sizeof(hello), 0) <= 0) {
-			printf_error("send() failed: %s", strerror(errno));
+			// printf_error("send() failed(heartbleed): %s", strerror(errno));
+			close(socketDescriptor);
 			// exit(1);
-			pthread_exit(NULL);
+			// pthread_exit(NULL);
+			return -1;// send error
 		}
 
 		// Send the heartbeat
@@ -1157,9 +1163,11 @@ int testHeartbleed(struct sslCheckOptions *options, const SSL_METHOD *sslMethod)
 			hb[2] = 0x03;
 		}
 		if (send(socketDescriptor, hb, sizeof(hb), 0) <= 0) {
-			printf_error("send() failed: %s", strerror(errno));
+			// printf_error("send() failed(heartbleed): %s", strerror(errno));
+			close(socketDescriptor);
 			// exit(1);
-			pthread_exit(NULL);
+			// pthread_exit(NULL);
+			return -1; // send error
 		}
 
 		char hbbuf[65536];
@@ -1200,6 +1208,7 @@ int testHeartbleed(struct sslCheckOptions *options, const SSL_METHOD *sslMethod)
 				// printf("%svulnerable%s to heartbleed\n", COL_RED, RESET);
 				// printf_xml("  <heartbleed sslversion=\"%s\" vulnerable=\"1\" />\n", printableSslMethod(sslMethod));
 				if (socketDescriptor) close(socketDescriptor);
+				else cleanBuff(socketDescriptor);
 				// return status;
 				return true;
 			}
@@ -1209,6 +1218,7 @@ int testHeartbleed(struct sslCheckOptions *options, const SSL_METHOD *sslMethod)
 
 		// Disconnect from host
 		if (socketDescriptor) close(socketDescriptor);
+		else cleanBuff(socketDescriptor);
 	} else {
 		// Could not connect
 		// printf_error("test heartbleed: Could not connect.");
@@ -1533,7 +1543,9 @@ int testCipher(struct sslCheckOptions *options, const SSL_METHOD *sslMethod, str
 		}
 
 		// Disconnect from host
-		if (socketDescriptor) CLOSE(socketDescriptor);
+		if (socketDescriptor) {CLOSE(socketDescriptor);}
+		else cleanBuff(socketDescriptor);
+		
 	}
 
 		// Could not connect
@@ -2106,6 +2118,7 @@ int test_ocsp_alpn(struct sslCheckOptions *options, struct result *res) {
 
 		// Disconnect from host
 		if (socketDescriptor) close(socketDescriptor);
+		else cleanBuff(socketDescriptor);
 	}
 
 		// Could not connect
@@ -2861,7 +2874,8 @@ int testConnection(struct sslCheckOptions *options) {
 			addrinfoResult = NULL;
 			// printf("%sConnected to %s%s\n\n", COL_GREEN, options->addrstr, RESET);
 			return true;
-		}
+		} 
+		else cleanBuff(socketDescriptor);
 	}
 	freeaddrinfo(addrinfoResult);
 	addrinfoResult = NULL;
@@ -2941,18 +2955,22 @@ int testHost(struct sslCheckOptions *options, struct result *res) {
 	}
 
 	if ((options->tls10_supported = checkIfTLSVersionIsSupported(options, TLSv1_0))) {
+		if (options->tls10_supported < 0) {res->connect_error |= 0b00000010; options->tls10_supported = 0; return 0;}
 		res->tls_version |= 0b00001000;
 	}
 
 	if ((options->tls11_supported = checkIfTLSVersionIsSupported(options, TLSv1_1))) {
+		if (options->tls11_supported < 0) {res->connect_error |= 0b00000010; options->tls11_supported = 0; return 0;}
 		res->tls_version |= 0b00000100;
 	}
 
 	if ((options->tls12_supported = checkIfTLSVersionIsSupported(options, TLSv1_2))) {
+		if (options->tls12_supported < 0) {res->connect_error |= 0b00000010; options->tls12_supported = 0; return 0;}
 		res->tls_version |= 0b00000010;
 	}
 
 	if ((options->tls13_supported = checkIfTLSVersionIsSupported(options, TLSv1_3))) {
+		if (options->tls13_supported < 0) {res->connect_error |= 0b00000010; options->tls13_supported = 0; return 0;}
 		res->tls_version |= 0b00000001;
 	}
 
@@ -3287,9 +3305,11 @@ int runSSLv2Test(struct sslCheckOptions *options) {
 
 	/* Send the SSLv2 Client Hello packet. */
 	if (send(s, sslv2_client_hello, sizeof(sslv2_client_hello), 0) <= 0) {
-		printf_error("send() failed: %s", strerror(errno));
+		printf_error("send() failed(sslv2): %s", strerror(errno));
+		close(s);
 		// exit(1);
-		pthread_exit(NULL);
+		// pthread_exit(NULL);
+		return false; // if send err, return false
 	}
 
 	/* Read a small amount of the response. */
@@ -3303,6 +3323,7 @@ int runSSLv2Test(struct sslCheckOptions *options) {
 
 	done:
 	if (s != 0) close(s);
+	else cleanBuff(s);
 	return ret;
 }
 
@@ -3432,9 +3453,11 @@ int runSSLv3Test(struct sslCheckOptions *options) {
 
 	/* Send the SSLv3 Client Hello packet. */
 	if (send(s, sslv3_client_hello_1, sizeof(sslv3_client_hello_1), 0) <= 0) {
-		printf_error("send() failed: %s", strerror(errno));
+		printf_error("send() failed(sslv3): %s", strerror(errno));
+		close(s);
 		// exit(1);
-		pthread_exit(NULL);
+		// pthread_exit(NULL);
+		return false; // if send err, return false
 	}
 
 	timestamp = htonl(time(NULL)); /* Current time stamp. */
@@ -3444,15 +3467,19 @@ int runSSLv3Test(struct sslCheckOptions *options) {
 	timestamp_bytes[3] = (timestamp >> 24) & 0xff;
 
 	if (send(s, timestamp_bytes, sizeof(timestamp_bytes), 0) <= 0) {
-		printf_error("send() failed: %s", strerror(errno));
+		printf_error("send() failed(sslv3): %s", strerror(errno));
+		close(s);
 		// exit(1);
-		pthread_exit(NULL);
+		// pthread_exit(NULL);
+		return false; // if send err, return false
 	}
 
 	if (send(s, sslv3_client_hello_2, sizeof(sslv3_client_hello_2), 0) <= 0) {
-		printf_error("send() failed: %s", strerror(errno));
+		printf_error("send() failed(sslv3): %s", strerror(errno));
+		close(s);
 		// exit(1);
-		pthread_exit(NULL);
+		// pthread_exit(NULL);
+		return false; // if send err, return false
 	}
 
 	/* Read a small amount of the response. */
@@ -3468,6 +3495,7 @@ int runSSLv3Test(struct sslCheckOptions *options) {
 
 	done:
 	if (s != 0) close(s);
+	else cleanBuff(s);
 	return ret;
 }
 
@@ -3515,7 +3543,8 @@ void bs_new_size(bs **b, size_t new_size) {
 	if (b == NULL) {
 		fprintf(stderr, "Error: bs_new*() given NULL pointer!\n");
 		// exit(-1);
-		pthread_exit(NULL);
+		// pthread_exit(NULL);
+		return;
 	}
 
 	/* If this byte string was already initialized, silently free it, then continue on. */
@@ -3529,14 +3558,16 @@ void bs_new_size(bs **b, size_t new_size) {
 	if (*b == NULL) {
 		fprintf(stderr, "bs_new_size(): failed to allocate new buffer.\n");
 		// exit(-1);
-		pthread_exit(NULL);
+		// pthread_exit(NULL);
+		return;
 	}
 
 	(*b)->buf = calloc(new_size, sizeof(unsigned char));
 	if ((*b)->buf == NULL) {
 		fprintf(stderr, "bs_new_size(): failed to allocate new buffer.\n");
 		// exit(-1);
-		pthread_exit(NULL);
+		// pthread_exit(NULL);
+		return;
 	}
 
 	(*b)->size = new_size;
@@ -3574,7 +3605,8 @@ void bs_append_bytes(bs *b, unsigned char *bytes, size_t bytes_len) {
 	if ((new_len < b_len) || (new_len < bytes_len)) {
 		fprintf(stderr, OVERFLOW_MESSAGE);
 		// exit(-1);
-		pthread_exit(NULL);
+		// pthread_exit(NULL);
+		return;
 	}
 
 	/* If the buffer needs re-sizing... */
@@ -3585,7 +3617,8 @@ void bs_append_bytes(bs *b, unsigned char *bytes, size_t bytes_len) {
 			if ((b_len * 2) < b_len) {
 				fprintf(stderr, OVERFLOW_MESSAGE);
 				// exit(-1);
-				pthread_exit(NULL);
+				// pthread_exit(NULL);
+				return;
 			}
 			b_size = b_size * 2;
 		}
@@ -3595,7 +3628,8 @@ void bs_append_bytes(bs *b, unsigned char *bytes, size_t bytes_len) {
 		if (b->buf == NULL) {
 			fprintf(stderr, "Failed to resize buffer.\n");
 			//   exit(-1);
-			pthread_exit(NULL);
+			// pthread_exit(NULL);
+			return;
 		}
 		b->size = b_size;
 
@@ -3818,12 +3852,15 @@ unsigned int checkIfTLSVersionIsSupported(struct sslCheckOptions *options, unsig
 
 	/* Now connect to the target server. */
 	s = tcpConnect(options);
+	// int n_buf = 128 * 1024;
+	// setsockopt(s, SOL_SOCKET, SO_SNDBUF, (const char *)&n_buf, sizeof(int));
 	if (s == 0)
 		goto done;
 
 	/* Send the Client Hello message. */
 	if (send(s, bs_get_bytes(client_hello), bs_get_len(client_hello), 0) <= 0) {
-		// printf_error("send() failed while sending Client Hello: %d (%s)", errno, strerror(errno));
+		// printf_error("send() failed while sending Client Hello(TLS version): %d (%s)", errno, strerror(errno));
+		ret = -1;
 		goto done; /* Returns false. */
 	}
 	bs_free(&client_hello);
@@ -3848,7 +3885,8 @@ unsigned int checkIfTLSVersionIsSupported(struct sslCheckOptions *options, unsig
 	ret = true;
 
 	done:
-	if (s != 0) CLOSE(s);
+	if (s != 0) {CLOSE(s);}
+	else cleanBuff(s);
 	bs_free(&ciphersuite_list);
 	bs_free(&tls_extensions);
 	bs_free(&client_hello);
@@ -4250,7 +4288,8 @@ int testMissingCiphers(struct sslCheckOptions *options, unsigned int tls_version
 			goto done;
 
 		/* Close the socket, since we're done reading. */
-		if (s) CLOSE(s);
+		if (s) {CLOSE(s);}
+		else cleanBuff(s);
 
 		/* Check that the TLS version returned is what we sent earlier. */
 		if ((bs_get_byte(server_hello, 1) != 0x03) ||
@@ -4317,7 +4356,8 @@ int testMissingCiphers(struct sslCheckOptions *options, unsigned int tls_version
 	}
 
 	done:
-	if (s) CLOSE(s);
+	if (s) {CLOSE(s);}
+	else cleanBuff(s);
 	bs_free(&ciphersuite_list);
 	bs_free(&tls_extensions);
 	bs_free(&client_hello);
@@ -4497,7 +4537,7 @@ int testSupportedGroups(struct sslCheckOptions *options) {
 				if (bytes == NULL) {
 					fprintf(stderr, "Failed to allocate buffer for key.\n");
 					//   exit(-1);
-					pthread_exit(NULL);
+					pthread_exit(NULL); // no need to optimize
 				}
 
 				/* Export the public key to our array. */
@@ -4518,7 +4558,7 @@ int testSupportedGroups(struct sslCheckOptions *options) {
 				/* Use the provided value, since it must be a specific format. */
 				fprintf(stderr, "Error: unknown NID_TYPE in struct: %d\n", nid_type);
 				// exit(-1);
-				pthread_exit(NULL);
+				pthread_exit(NULL); // no need to optimize
 			}
 
 			/* Make generic TLS extensions (with SNI, accepted EC point formats, etc). */
@@ -4892,9 +4932,9 @@ void print_char_to_binary(char x) {
 }
 
 FILE *fp;
-char buffer[1024] = {0};
 
 void print_result_to_file(struct result *res) {
+	char buffer[1024] = {0};
 	sprintf(buffer, "%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n", res->index, res->host,
 	        (unsigned char) res->connect_error, (unsigned char) res->tls_version, \
             (unsigned char) res->reneg, (unsigned char) res->heartbleed,
@@ -4903,6 +4943,27 @@ void print_result_to_file(struct result *res) {
 	        (unsigned char) res->ocsp_stapling, (unsigned char) res->fs, \
             res->fs_cipherbits, (unsigned char) res->alpn);
 	fwrite(buffer, 1, strlen(buffer), fp);
+}
+
+void cleanBuff(int sock_conn){
+    // 设置select立即返回
+    struct timeval time_out;
+    time_out.tv_sec = 0;
+    time_out.tv_usec = 0;
+    
+    // 设置select对sock_conn的读取感兴趣
+    fd_set read_fds;
+    FD_ZERO(&read_fds);
+    FD_SET(sock_conn, &read_fds);
+
+    int res = -1;
+    char recv_data[2];
+    memset(recv_data, 0, sizeof(recv_data));
+    while(true){
+        res = select(FD_SETSIZE, &read_fds, NULL, NULL, &time_out);
+        if (res == 0) break;  //数据读取完毕，缓存区清空成功
+        recv(sock_conn, recv_data, 1, 0);  //触发数据读取
+    }
 }
 
 int main(int argc, char *argv[]) {
@@ -4917,7 +4978,8 @@ int main(int argc, char *argv[]) {
 	SSL_library_init();
 
 	int line_number_max = 750000;
-	int check_size = 20000;
+	int check_size = 40000;
+	int start_index = 0;
 	struct result *res = (struct result *) malloc(sizeof(struct result) * line_number_max);
 	memset(res, 0, sizeof(struct result) * line_number_max);
 	read_csv(res, infile);
@@ -4928,7 +4990,7 @@ int main(int argc, char *argv[]) {
 	}
 	threadpool pool = thpool_init(thread_number);
 	printf("start test\n");
-	for (int i = 0; res[i].index != 0 && i < check_size; i++) {
+	for (int i = start_index; res[i].index != 0 && i < check_size; i++) {
 		if (thpool_num_threads_working(pool) < thread_number) {
 			printf("\b\b\b\b\b\b\b\b\b\b\b\bdoing:%d", i);
 			thpool_add_work(pool, (void *) test, (void *) &res[i]);
@@ -4942,7 +5004,7 @@ int main(int argc, char *argv[]) {
 	thpool_wait(pool);
 	fclose(fp);
 	int errnum = 0;
-	for (int i = 0; i < check_size; i++) {
+	for (int i = start_index; i < check_size; i++) {
 		errnum += res[i].connect_error;
 	}
 	printf("check size:%d, error number: %d\n", check_size, errnum);
@@ -4953,7 +5015,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "fopen() failed.\n");
 		exit(EXIT_FAILURE);
 	}
-	for (int i = 0; res[i].index != 0 && i < check_size; i++) {
+	for (int i = start_index; res[i].index != 0 && i < check_size; i++) {
 		if (thpool_num_threads_working(pool) < thread_number) {
 			printf("\b\b\b\b\b\b\b\b\b\b\b\bdoing:%d", i);
 			if (res[i].connect_error) {
@@ -4969,7 +5031,7 @@ int main(int argc, char *argv[]) {
 	printf("\nwaiting for all threads to finish\n");
 	thpool_wait(pool);
 	errnum = 0;
-	for (int i = 0; i < check_size; i++) {
+	for (int i = start_index; i < check_size; i++) {
 		errnum += res[i].connect_error;
 	}
 	printf("check size:%d, error number: %d\n", check_size, errnum);
@@ -4983,7 +5045,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "fopen() failed.\n");
 		exit(EXIT_FAILURE);
 	}
-	for (int i = 0; res[i].index != 0 && i < check_size; i++) {
+	for (int i = start_index; res[i].index != 0 && i < check_size; i++) {
 		print_result_to_file(&res[i]);
 	}
 	FREE(res);
